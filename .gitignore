@@ -1,0 +1,9 @@
+.ipynb_checkpoints
+.idea
+.eslintrc.cjs
+
+audiocraft
+venv
+__pycache__
+multithreading.ipynb
+

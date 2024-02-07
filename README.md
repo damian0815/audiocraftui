@@ -1,4 +1,6 @@
-# React + Flask + Vite + socketio
+# musicgen riff playground
+
+a web ui for playing around with the MusicGen tokenization and prediction features. built by damian0815 using React + Flask + Vite + socketio
 
 ## setup
 

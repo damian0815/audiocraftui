@@ -2,20 +2,30 @@
 
 ## setup
 
+### todo: put this stuff in a docker container
+
 create venv
 ```shell
 python -m venv --prompt audiocraftui --system-site-packages venv 
 source venv/bin/activate
 ```
 
-clone audiocraft and install requirements (my commit: 2a5c5e971915aa03bd99defe44bde2a4bebb4361)
+clone audiocraft and install requirements
 ```shell
 git clone git@github.com:facebookresearch/audiocraft.git
+```
+for mps support:
+```shell
+git clone git@github.com:damian0815/audiocraft.git
+git checkout mps_hacks
+```
+
+install dependencies:
+```shell
 pip install -r audiocraft/requirements.txt
 pip install flask flask_socketio flask_cors
 ```
 
-## todo: put this stuff in a docker container
 install js stuff (assumes you already have node installed, if not use nvm or similar to install node.js 18)
 ```shell
 cd vite

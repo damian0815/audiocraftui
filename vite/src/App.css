@@ -40,3 +40,27 @@
 .read-the-docs {
   color: #888;
 }
+
+.token-grid {
+  display: grid;
+  grid-column-gap: 0;
+  grid-row-gap: 4px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.token-grid .element {
+  width: 8px;
+  height: 8px;
+}
+
+.token-grid .element .half {
+    display: inline-block;
+  height: 100%;
+  width: 4px;
+  vertical-align: top;
+}
+
+.token-grid .element .half#lsb {
+  vertical-align: top;
+  height: 75%;
+}

@@ -5,6 +5,8 @@ import './App.css'
 
 import { socket } from './socket.ts'
 import {ConnectionManager} from "./ConnectionManager.tsx";
+import {TokensGrid} from "./TokensGrid.tsx";
+import {AudioLoader} from "./AudioLoader.tsx";
 
 function App() {
   const [count, setCount] = useState(0)
@@ -38,6 +40,10 @@ function App() {
     };
   }, []);
 
+  const sendTokens = () => {
+      console.log("emitting set_tokens")
+      socket.emit("set_tokens", [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10,11,12]] )
+  }
 
   return (
     <>
@@ -58,9 +64,13 @@ function App() {
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
       </div>
+        <AudioLoader />
         <div className="card">
             <ConnectionManager />
-          <button onClick={ () => socket.emit("foo") }>Foo</button>
+            <button onClick={ () => socket.emit("foo") }>Foo</button>
+
+            <TokensGrid rows={4} cols={200} />
+            <button onClick={ sendTokens }>Send Tokens</button>
 
             <div>is connected: {isConnected ? "1" : "0"}</div>
         </div>

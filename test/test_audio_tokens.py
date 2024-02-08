@@ -1,8 +1,10 @@
 import os
 import unittest
 import torch
+import soundfile as sf
 
 from audiocraft_wrapper import AudiocraftWrapper
+from audiocraft.data.audio_utils import convert_audio
 
 
 class MyTestCase(unittest.TestCase):
@@ -13,8 +15,19 @@ class MyTestCase(unittest.TestCase):
         self.audiocraft_wrapper = AudiocraftWrapper()
         print("loaded")
 
+    def test_encode(self):
+        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'groove.wav')
+        data, fs = sf.read(TESTDATA_FILENAME, always_2d=True)
+        # data is ndarray(740352, 2)
+        data_tensor = torch.transpose(torch.tensor(data, dtype=torch.float32), 1, 0)
+        audio = self.audiocraft_wrapper.prepare_audio_for_tokenization(data_tensor, sample_rate=fs)
+        print(audio)
+        tokens = self.audiocraft_wrapper.generate_tokens_from_audio(audio)
+        print(tokens)
 
-    def test_something(self):
+
+
+    def test_decode_encode_cycle(self):
 
         tokens = torch.tensor([[[166, 166, 166, 166, 166, 1783, 2012, 2047, 1121, 490, 490,
                                  636, 1279, 753, 166, 166, 166, 166, 41, 490, 490, 1121,

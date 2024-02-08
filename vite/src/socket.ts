@@ -14,6 +14,7 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   foo: () => void;
+  set_tokens: (tokens: [][]) => void
 }
 
 export interface InterServerEvents {

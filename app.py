@@ -23,6 +23,11 @@ def foo_event():
         emit('fooResponse', {"data1":x, "data":f"hello number {x}"}, room=sid)
         socketio.sleep(1)
 
+@socketio.on("set_tokens")
+def set_tokens_event(data):
+    print("got set_tokens:", data)
+
+
 print("extensions: ", app.extensions)
 
 if __name__ == '__main__':

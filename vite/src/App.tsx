@@ -3,10 +3,10 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
-import { socket } from './socket.ts'
-import {ConnectionManager} from "./ConnectionManager.tsx";
-import {TokensGrid} from "./TokensGrid.tsx";
-import {AudioLoader} from "./AudioLoader.tsx";
+import { socket } from './system/socket.ts'
+import {ConnectionManager} from "./components/ConnectionManager.tsx";
+import {TokensGrid} from "./components/TokensGrid.tsx";
+import {AudioSystem} from "./components/AudioSystem.tsx";
 
 function App() {
   const [count, setCount] = useState(0)
@@ -64,12 +64,11 @@ function App() {
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
       </div>
-        <AudioLoader />
+        <AudioSystem />
         <div className="card">
             <ConnectionManager />
             <button onClick={ () => socket.emit("foo") }>Foo</button>
 
-            <TokensGrid rows={4} cols={200} />
             <button onClick={ sendTokens }>Send Tokens</button>
 
             <div>is connected: {isConnected ? "1" : "0"}</div>

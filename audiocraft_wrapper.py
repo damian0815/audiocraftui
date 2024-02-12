@@ -29,7 +29,7 @@ class AudiocraftWrapper():
         res = self.model.compression_model.decode(tokens)
         return res
 
-    def generate_tokens_from_audio(self, audio: torch.tensor):
+    def generate_tokens_from_audio(self, audio: torch.tensor) -> torch.IntTensor:
         if len(audio.shape) != 3 or audio.shape[0] != 1:
             raise ValueError(f"bad audio shape, expected (1,C,N), got {audio.shape}")
         res = self.model.compression_model.encode(audio)[0]

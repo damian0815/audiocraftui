@@ -1,4 +1,4 @@
-import { socket } from './socket.ts';
+import { socket } from '../system/socket.ts';
 
 export function ConnectionManager() {
   function connect() {

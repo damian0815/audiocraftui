@@ -3,7 +3,7 @@ import { io, Socket } from "socket.io-client";
 export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://localhost:4000',
 {
       path: '/socket.io',
-      autoConnect: false
+      autoConnect: true
 });
 
 export interface ServerToClientEvents {
@@ -15,10 +15,7 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   foo: () => void;
   set_tokens: (tokens: [][]) => void
-}
-
-export interface InterServerEvents {
-  ping: () => void;
+    tokenize: (data) => void
 }
 
 export interface SocketData {

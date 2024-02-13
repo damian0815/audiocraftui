@@ -48,13 +48,23 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
-.token-grid .element {
-  width: 8px;
+.token-grid .row {
   height: 8px;
 }
 
+.token-grid .element {
+  width: 4px;
+  height: 8px;
+}
+
+.token-grid .element .full {
+  display: inline-block;
+  height: 100%;
+  width: 100%;
+}
+
 .token-grid .element .half {
-    display: inline-block;
+  display: inline-block;
   height: 100%;
   width: 4px;
   vertical-align: top;

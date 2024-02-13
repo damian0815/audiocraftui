@@ -16,6 +16,7 @@ export interface ClientToServerEvents {
   foo: () => void;
   set_tokens: (tokens: [][]) => void
     tokenize: (data) => void
+    detokenize: (data) => void
 }
 
 export interface SocketData {

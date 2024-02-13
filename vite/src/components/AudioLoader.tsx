@@ -91,7 +91,6 @@ export function AudioLoader({loadedCallback}: {loadedCallback : (buffer: ToneAud
     return <>
         <AudioFileDropZone gotFile={onAudioFileSelected} />
     </>
-    return <GrooveSamplePlayer />
 
 }
 

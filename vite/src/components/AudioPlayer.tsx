@@ -1,6 +1,5 @@
 import {useEffect} from "react";
-import WaveSurfer from "wavesurfer.js";
-import {Tone, ToneAudioBuffer} from "tone";
+import {ToneAudioBuffer} from "tone";
 import {AudioLoader} from "./AudioLoader.tsx";
 
 const waveSurferInstance = WaveSurfer.create({
@@ -15,7 +14,6 @@ export function AudioInterface() {
         const peaks = [toneBuffer.get().getChannelData(0), toneBuffer.get().getChannelData(1)]
         const duration = toneBuffer.get().duration
 
-        wavesurfer.load(url, peaks, duration)
     }
 
     <AudioLoader />

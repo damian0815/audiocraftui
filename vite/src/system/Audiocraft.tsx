@@ -3,6 +3,8 @@ import {socket as Socket} from "./socket.ts";
 import {ToneAudioBuffer} from "tone";
 
 import { encode, Encoder } from "msgpack-ts"
+import {call} from "audiobuffer-to-wav";
+import {type} from "os";
 
 function platformIsLittleEndian() {
     var arrayBuffer = new ArrayBuffer(2);
@@ -13,6 +15,22 @@ function platformIsLittleEndian() {
     if(uint16array[0] === 0xBBAA) return true;
     if(uint16array[0] === 0xAABB) return false;
     else throw new Error("Something crazy just happened");
+}
+
+function swapBytes32InPlace(buf) {
+    var bytes = new Uint8Array(buf);
+    var len = bytes.length;
+    var holder;
+
+    // 32 bit
+    for (var i = 0; i<len; i+=4) {
+        holder = bytes[i];
+        bytes[i] = bytes[i+3];
+        bytes[i+3] = holder;
+        holder = bytes[i+1];
+        bytes[i+1] = bytes[i+2];
+        bytes[i+2] = holder;
+    }
 }
 
 export class Audiocraft {
@@ -30,11 +48,21 @@ export class Audiocraft {
             const tokens = ret['tokens']
             self._handleTokenizeResponse(uuid, tokens)
         })
+
+        this.socket.on('detokenizeResponse', function (ret) {
+            console.log('got detokenizeResponse', ret)
+            const uuid = ret['uuid']
+            const audio_float32_bytes = ret['audioFloat32Bytes']
+            const is_little_endian = ret['audioIsLittleEndian']
+            const sample_rate = ret['sample_rate']
+            self._handleDetokenizeResponse(uuid, audio_float32_bytes, is_little_endian, sample_rate)
+        })
     }
 
-    tokenize(buffer: ToneAudioBuffer, callback: (x: any) => void) {
+    tokenize(buffer: ToneAudioBuffer, callback: (x: any) => void): ToneAudioBuffer {
         console.log("as array:")
-        const bufferArray = buffer.slice(0, this.maxLengthSeconds).toArray(0)
+        const bufferSlice = buffer.slice(0, this.maxLengthSeconds)
+        const bufferArray = bufferSlice.toArray(0)
         console.log(bufferArray)
         const requestUuid = uuid()
         this.requestCallbackStorage.set(requestUuid, callback)
@@ -49,6 +77,8 @@ export class Audiocraft {
             'audioIsLittleEndian': platformIsLittleEndian(),
             'sample_rate': buffer.sampleRate
         })
+
+        return bufferSlice
     }
 
     _handleTokenizeResponse(uuid: string, tokens: any) {
@@ -61,5 +91,37 @@ export class Audiocraft {
             console.log('no registered callback for', uuid)
         }
     }
+
+    detokenize(tokens: number[][], desiredSampleRate: number, callback: (x: any) => void) {
+        const requestUuid = uuid()
+        this.requestCallbackStorage.set(requestUuid, callback)
+        this.socket.emit('detokenize', {
+            'uuid': requestUuid,
+            'tokens': tokens,
+            'desiredSampleRate': desiredSampleRate
+        })
+    }
+
+    _handleDetokenizeResponse(uuid: string, audioFloat32Bytes: ArrayBuffer, audioIsLittleEndian: boolean) {
+        console.log('in detokenizeResponse handler: audio', audioFloat32Bytes)
+        const callback = this.requestCallbackStorage.get(uuid)
+
+        if (audioIsLittleEndian != platformIsLittleEndian()) {
+            swapBytes32InPlace(audioFloat32Bytes)
+        }
+
+        const audio = new Float32Array(audioFloat32Bytes)
+        //const audio =
+
+        if (callback) {
+            callback(audio)
+            this.requestCallbackStorage.delete(uuid)
+        } else {
+            console.log('no registered callback for', uuid)
+        }
+
+    }
+
+
 
 }

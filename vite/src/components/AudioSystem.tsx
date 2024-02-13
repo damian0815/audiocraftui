@@ -9,9 +9,10 @@ import audioBufferToWav from 'audiobuffer-to-wav'
 
 import { useRef } from 'react'
 import GROOVE_MP3 from '../assets/groove.mp3'
-import WaveSurfer from "wavesurfer.js";
+import WavesurferPlayer from '@wavesurfer/react'
 import {debounce} from "../system/debounce.ts";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions";
+import WaveSurfer from "wavesurfer.js";
 
 const audiocraft = new Audiocraft(socket)
 
@@ -31,32 +32,62 @@ function useTraceUpdate(props) {
   });
 }
 
-export function WavesurferPanel({url}: {url: string}) {
 
-    const containerRef = useRef(null)
+export function WavesurferPanel({audioBuffer}: {audioBuffer: ToneAudioBuffer}) {
 
-    //console.log("rendering wavesurfer panel, containerRef is", containerRef)
+    const [audioBlobURL, setAudioBlobURL] = useState<string|undefined>()
 
-    const { wavesurfer, isReady, isPlaying, currentTime } = useWavesurfer({
-        container: containerRef,
-        url: url,
-        waveColor: 'purple',
-        height: 100
-    })
+    const [wavesurfer, setWavesurfer] = useState<WaveSurfer|null>(null)
+    const [isPlaying, setIsPlaying] = useState(false)
+    const [regionsPluginInstance, setRegionsPluginInstance] = useState<RegionsPlugin|undefined>(undefined)
 
-    //console.log("wavesurfer panel:", wavesurfer, isReady)
+
+    useEffect(() => {
+        if (audioBuffer) {
+            console.log("setting audioBlobURL for", audioBuffer)
+            const audioBlob = new Blob([audioBufferToWav(audioBuffer.get()!)], {type: "audio/wav"})
+            setAudioBlobURL(URL.createObjectURL(audioBlob))
+
+        }
+    }, [audioBuffer])
+
+
+    const onReady = (ws: WaveSurfer) => {
+        setWavesurfer(ws)
+        setIsPlaying(false)
+    }
 
     const onPlayPause = () => {
-        console.log('onPlayPause: wavesurfer is', wavesurfer)
         wavesurfer && wavesurfer.playPause()
     }
 
-    useEffect(() => {
-        console.log('wavesurfer', wavesurfer, 'isReady', isReady)
+    console.log("audio blob URL has length", audioBlobURL?.length)
 
-        if (isReady) {
-            // Initialize the Regions plugin
-            const wsRegions = wavesurfer!.registerPlugin(RegionsPlugin.create())
+    return (
+    <>
+          <WavesurferPlayer
+            height={100}
+            waveColor="violet"
+            url={audioBlobURL}
+            onReady={onReady}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+          />
+
+          <button onClick={onPlayPause}>
+            {isPlaying ? 'Pause' : 'Play'}
+          </button>
+    </>
+  )
+
+
+    //console.log("rendering wavesurferInstance panel, containerRef is", containerRef)
+
+
+
+    /*
+    useEffect(() => {
+        console.log('wavesurfer', wavesurferInstance, 'isReady', wavesurferInstance.)
 
             // Create some regions at specific time ranges
             // Give regions a random color when they are created
@@ -108,19 +139,9 @@ export function WavesurferPanel({url}: {url: string}) {
             })
 
 
-        }
-
-    }, [wavesurfer, isReady])
 
 
-
-    return <div>
-        <div ref={containerRef} />
-        <button onClick={onPlayPause}>
-            {isPlaying ? 'Pause' : 'Play'}
-        </button>
-    </div>
-
+    }, [wavesurferInstance])*/
 }
 
 function cloneArray(items: any) {
@@ -131,29 +152,25 @@ function cloneArray(items: any) {
 class AudioRegion {
     start: number = 0
     end: number = 0
+    constructor(start: number, end: number) {
+        this.start = start
+        this.end = end
+    }
     duration() { return this.end - this.start }
 }
 
-const MAX_DURATION = 1
+const MAX_DURATION = 4
 
 export function AudioSystem() {
 
     const [tokens, setTokens] = useState<number[][]>([[]])
     const [audioBuffer, setAudioBuffer] = useState<ToneAudioBuffer|undefined>(undefined)
     const [range, setRange] = useState<AudioRegion|undefined>(undefined)
-    const [audioBlobURL, setAudioBlobURL] = useState<string|undefined>()
 
     useEffect(() => {
-        if (audioBuffer) {
-            console.log("setting audioBlobURL for", audioBuffer)
-            const audioBlob = new Blob([audioBufferToWav(audioBuffer.get()!)], {type: "audio/wav"})
-            setAudioBlobURL(URL.createObjectURL(audioBlob))
-        }
-    }, [audioBuffer])
-
-
-    useEffect(() => {
-        if (audioBuffer && range && range.duration() < MAX_DURATION) {
+        console.log("audioBuffer", audioBuffer, "range", range)
+        if (audioBuffer && range && range.duration() <= MAX_DURATION) {
+            console.log("-> requesting tokenization")
             audiocraft.tokenize(audioBuffer!.slice(range.start, range.end)!, (tokens) => {
                 setTokens(tokens)
             })
@@ -163,8 +180,8 @@ export function AudioSystem() {
 
     async function onAudioLoaded(buffer: ToneAudioBuffer) {
         console.log("onAudioLoaded, buffer is:", buffer)
-        setRange(undefined)
-        setAudioBuffer(buffer.slice(0, 4))
+        setRange(new AudioRegion(0, 4))
+        setAudioBuffer(buffer)
     }
 
 
@@ -188,7 +205,7 @@ export function AudioSystem() {
     return <div className="audiosystem">
         <AudioLoader loadedCallback={ onAudioLoaded }/>
         <TokensGrid data={tokens} tokensModifiedCallback={ onTokensModified } />
-        { audioBlobURL && <WavesurferPanel url={audioBlobURL} /> }
+        { audioBuffer && <WavesurferPanel audioBuffer={audioBuffer} /> }
     </div>
 
 }

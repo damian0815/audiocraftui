@@ -60,8 +60,10 @@ export class Audiocraft {
     }
 
     tokenize(buffer: ToneAudioBuffer, callback: (x: any) => void): ToneAudioBuffer {
-        console.log("as array:")
-        const bufferSlice = buffer.slice(0, this.maxLengthSeconds)
+        console.log("tokenizing", buffer)
+        const bufferSlice = buffer.slice(0, Math.min(buffer.duration, this.maxLengthSeconds))
+        console.log("bufferSlice is :", bufferSlice)
+
         const bufferArray = bufferSlice.toArray(0)
         console.log(bufferArray)
         const requestUuid = uuid()

@@ -1,18 +1,15 @@
 import {AudioLoader} from "./AudioLoader.tsx";
 import {ToneAudioBuffer} from "tone";
-import { socket } from '../system/socket.ts'
-import { Audiocraft } from '../system/Audiocraft.tsx';
+import {socket} from '../system/socket.ts'
+import {Audiocraft} from '../system/Audiocraft.tsx';
 import {TokensGrid} from "./TokensGrid.tsx";
-import {useEffect, useState} from "react";
-import {useWavesurfer} from '@wavesurfer/react'
-import audioBufferToWav from 'audiobuffer-to-wav'
-
-import { useRef } from 'react'
-import GROOVE_MP3 from '../assets/groove.mp3'
-import WavesurferPlayer from '@wavesurfer/react'
+import {useEffect, useRef, useState} from "react";
 import {debounce} from "../system/debounce.ts";
-import RegionsPlugin from "wavesurfer.js/dist/plugins/regions";
-import WaveSurfer from "wavesurfer.js";
+import {WavesurferPanel} from "./WavesurferPanel.tsx";
+import {Region} from "wavesurfer.js/dist/plugins/regions";
+import ReactSlider from "react-slider";
+import {cloneArray} from "../system/cloneArray.tsx";
+import {shuffle} from "../system/seedRandom.ts"
 
 const audiocraft = new Audiocraft(socket)
 
@@ -33,122 +30,6 @@ function useTraceUpdate(props) {
 }
 
 
-export function WavesurferPanel({audioBuffer}: {audioBuffer: ToneAudioBuffer}) {
-
-    const [audioBlobURL, setAudioBlobURL] = useState<string|undefined>()
-
-    const [wavesurfer, setWavesurfer] = useState<WaveSurfer|null>(null)
-    const [isPlaying, setIsPlaying] = useState(false)
-    const [regionsPluginInstance, setRegionsPluginInstance] = useState<RegionsPlugin|undefined>(undefined)
-
-
-    useEffect(() => {
-        if (audioBuffer) {
-            console.log("setting audioBlobURL for", audioBuffer)
-            const audioBlob = new Blob([audioBufferToWav(audioBuffer.get()!)], {type: "audio/wav"})
-            setAudioBlobURL(URL.createObjectURL(audioBlob))
-
-        }
-    }, [audioBuffer])
-
-
-    const onReady = (ws: WaveSurfer) => {
-        setWavesurfer(ws)
-        setIsPlaying(false)
-    }
-
-    const onPlayPause = () => {
-        wavesurfer && wavesurfer.playPause()
-    }
-
-    console.log("audio blob URL has length", audioBlobURL?.length)
-
-    return (
-    <>
-          <WavesurferPlayer
-            height={100}
-            waveColor="violet"
-            url={audioBlobURL}
-            onReady={onReady}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-          />
-
-          <button onClick={onPlayPause}>
-            {isPlaying ? 'Pause' : 'Play'}
-          </button>
-    </>
-  )
-
-
-    //console.log("rendering wavesurferInstance panel, containerRef is", containerRef)
-
-
-
-    /*
-    useEffect(() => {
-        console.log('wavesurfer', wavesurferInstance, 'isReady', wavesurferInstance.)
-
-            // Create some regions at specific time ranges
-            // Give regions a random color when they are created
-            const random = (min, max) => Math.random() * (max - min) + min
-            const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`
-
-            // Regions
-            wsRegions.addRegion({
-                start: 0,
-                end: 0.8,
-                content: 'Resize me',
-                color: randomColor(),
-                drag: false,
-                resize: true,
-            })
-            wsRegions.addRegion({
-                start: 0.9,
-                end: 1,
-                content: 'Cramped region',
-                color: randomColor(),
-                minLength: 0.1,
-                maxLength: 1,
-            })
-            wsRegions.addRegion({
-                start: 1.2,
-                end: 1.7,
-                content: 'Drag me',
-                color: randomColor(),
-                resize: false,
-            })
-
-            // Markers (zero-length regions)
-            wsRegions.addRegion({
-                start: 1.9,
-                content: 'Marker',
-                color: randomColor(),
-            })
-            wsRegions.addRegion({
-                start: 2,
-                content: 'Second marker',
-                color: randomColor(),
-            })
-            wsRegions.enableDragSelection({
-                color: 'rgba(255, 0, 0, 0.1)',
-            })
-
-            wsRegions.on('region-updated', (region) => {
-                console.log('Updated region', region)
-            })
-
-
-
-
-    }, [wavesurferInstance])*/
-}
-
-function cloneArray(items: any) {
-    return items.map(item => Array.isArray(item) ? cloneArray(item) : item);
-}
-
-
 class AudioRegion {
     start: number = 0
     end: number = 0
@@ -163,49 +44,160 @@ const MAX_DURATION = 4
 
 export function AudioSystem() {
 
-    const [tokens, setTokens] = useState<number[][]>([[]])
-    const [audioBuffer, setAudioBuffer] = useState<ToneAudioBuffer|undefined>(undefined)
-    const [range, setRange] = useState<AudioRegion|undefined>(undefined)
+    const [tokens, setTokens] = useState<number[][][]>([[[]], [[]]])
+    const [workingTokens, setWorkingTokens] = useState<number[][]>([[]])
+    const [workingAudioBuffer, setWorkingAudioBuffer] = useState<ToneAudioBuffer|undefined>()
+    const [sourceAudioBuffer, setSourceAudioBuffer] = useState<ToneAudioBuffer|undefined>(undefined)
+    const [sourceAudioRegion, setSourceAudioRegion] = useState<AudioRegion|undefined>(undefined)
+    const [randomSeed, setRandomSeed] = useState(100)
+    const [slidersLinked, setSlidersLinked] = useState(true)
 
+    /*
     useEffect(() => {
-        console.log("audioBuffer", audioBuffer, "range", range)
-        if (audioBuffer && range && range.duration() <= MAX_DURATION) {
+        console.log("sourceAudioBuffer", sourceAudioBuffer, "range", sourceAudioRegion)
+        if (sourceAudioBuffer && sourceAudioRegion && sourceAudioRegion.duration() <= MAX_DURATION) {
             console.log("-> requesting tokenization")
-            audiocraft.tokenize(audioBuffer!.slice(range.start, range.end)!, (tokens) => {
+            audiocraft.tokenize(sourceAudioBuffer!.slice(sourceAudioRegion.start, sourceAudioRegion.end)!, (tokens) => {
+
                 setTokens(tokens)
             })
         }
-    }, [audioBuffer, range])
+    }, [sourceAudioBuffer, sourceAudioRegion])*/
 
+    function sendAudioRegionToTokens(whichTokens: number) {
+        console.log("sending region", sourceAudioRegion, "from buffer", sourceAudioBuffer, "to tokens", whichTokens)
+        if (sourceAudioBuffer && sourceAudioRegion && sourceAudioRegion.duration() <= MAX_DURATION) {
+            const newAllTokens: number[][][] = cloneArray(tokens) as number[][][]
+            const thisAudioBuffer= sourceAudioBuffer.slice(sourceAudioRegion.start, sourceAudioRegion.end)!
+            console.log("-> requesting tokenization")
+            audiocraft.tokenize(thisAudioBuffer, (tokens) => {
+                newAllTokens[whichTokens] = tokens
+                setTokens(newAllTokens)
+            })
+        }
+    }
 
     async function onAudioLoaded(buffer: ToneAudioBuffer) {
         console.log("onAudioLoaded, buffer is:", buffer)
-        setRange(new AudioRegion(0, 4))
-        setAudioBuffer(buffer)
+        setSourceAudioRegion(new AudioRegion(0, 4))
+        setSourceAudioBuffer(buffer)
     }
 
-
-    function debouncedDetokenize(tokens: any, desiredSampleRate: number, callback: any) {
+    function debouncedDetokenize(tokens: number[][], desiredSampleRate: number, callback: (x: any) => void) {
         debounce(() => {
             audiocraft.detokenize(tokens, desiredSampleRate, callback)
         }, 1000)()
     }
 
-    async function onTokensModified(newTokens: number[][]) {
-        setTokens(cloneArray(newTokens))
-        console.log("onTokensModified, new tokens are:", newTokens)
-        debouncedDetokenize(newTokens, ToneAudioBuffer.prototype.sampleRate, (audioFloats) => {
+    async function onWorkingTokensModified(newTokens: number[][]) {
+        setWorkingTokens(cloneArray(newTokens) as number[][])
+    }
+
+    useEffect(() => {
+        console.log("onTokensModified, new tokens are:", workingTokens)
+        debouncedDetokenize(workingTokens, ToneAudioBuffer.prototype.sampleRate, (audioFloats: Float32Array) => {
             const audio = ToneAudioBuffer.fromArray(audioFloats)
-            console.log("detokenized to", audio)
-            console.log("buffer:", audio.get())
-            setUsedAudio(audio)
+            console.log("detokenized to", audio, "buffer", audio.get(), "->assigning to workingAudioBuffer")
+            setWorkingAudioBuffer(audio)
         })
+    }, [workingTokens])
+
+    function onSourceRegionUpdated(buffer: ToneAudioBuffer, region: Region) {
+        console.log("region updated to", region.start, "-", region.end)
+        setSourceAudioRegion(new AudioRegion(region.start, region.end))
+        setSourceAudioBuffer(buffer)
+    }
+
+    function onMixerSliderChanged(whichChannel: number, value: number, thumbIndex: number) {
+        const numChannels = tokens[0].length
+        const countPerChannel = Math.min(tokens[0][whichChannel].length, tokens[1][whichChannel].length)
+        const cutoffIndex = (value/100) * countPerChannel
+        const newWorkingTokens: number[][] = cloneArray(workingTokens) as number[][]
+
+        for (let i=0; i<numChannels; i++) {
+            if (slidersLinked || i == whichChannel) {
+                const sequence: number[] = shuffle(Array.from(Array(countPerChannel).keys()), randomSeed + i) as number[]
+                sequence.forEach((sourceIndex, sequenceIndex) => {
+                    //console.log("channel:", channel, "sourceIndex:", sourceIndex)
+                    if (sequenceIndex > cutoffIndex) {
+                        newWorkingTokens[i][sourceIndex] = tokens[0][i][sourceIndex]
+                    } else {
+                        newWorkingTokens[i][sourceIndex] = tokens[1][i][sourceIndex]
+                    }
+                })
+            }
+        }
+        setWorkingTokens(newWorkingTokens)
     }
 
     return <div className="audiosystem">
         <AudioLoader loadedCallback={ onAudioLoaded }/>
-        <TokensGrid data={tokens} tokensModifiedCallback={ onTokensModified } />
-        { audioBuffer && <WavesurferPanel audioBuffer={audioBuffer} /> }
+        { sourceAudioBuffer && <WavesurferPanel id={"source"} audioBuffer={sourceAudioBuffer} regionUpdated={onSourceRegionUpdated} /> }
+        <button onClick={()=>{ sendAudioRegionToTokens(0) }}>
+            Send to tokens 1
+        </button>
+        <button onClick={()=>{ sendAudioRegionToTokens(1) }}>
+            Send to tokens 2
+        </button>
+
+        <h2>Tokens 1</h2>
+        <TokensGrid data={tokens[0]} />
+        <h2>Tokens 2</h2>
+        <TokensGrid data={tokens[1]} />
+        <h2>Working tokens</h2>
+
+        <button onClick={() => { setWorkingTokens(cloneArray(tokens[0]) as number[][])} } >
+            Take tokens 1
+        </button>
+        <button onClick={() => { setWorkingTokens(cloneArray(tokens[1]) as number[][])} } >
+            Take tokens 2
+        </button>
+
+        <label>
+            <input type="checkbox" onChange={(e) => setSlidersLinked(e.target.checked)} />
+        </label>
+        <ReactSlider
+                className="horizontal-slider"
+                thumbClassName="example-thumb"
+                trackClassName="example-track"
+                renderThumb={(props, state) => <div {...props}>{state.valueNow}</div>}
+                onAfterChange={(value, index) => onMixerSliderChanged(0, value, index)}
+        />
+        { !slidersLinked && <>
+            <ReactSlider
+                    className="horizontal-slider"
+                    thumbClassName="example-thumb"
+                    trackClassName="example-track"
+                    renderThumb={(props, state) => <div {...props}>{state.valueNow}</div>}
+                    onAfterChange={(value, index) => onMixerSliderChanged(1, value, index)} />
+            <ReactSlider
+                    className="horizontal-slider"
+                    thumbClassName="example-thumb"
+                    trackClassName="example-track"
+                    renderThumb={(props, state) => <div {...props}>{state.valueNow}</div>}
+                    onAfterChange={(value, index) => onMixerSliderChanged(2, value, index)} />
+            <ReactSlider
+                    className="horizontal-slider"
+                    thumbClassName="example-thumb"
+                    trackClassName="example-track"
+                    renderThumb={(props, state) => <div {...props}>{state.valueNow}</div>}
+                    onAfterChange={(value, index) => onMixerSliderChanged(3, value, index)} />
+        </> }
+
+        <label>Random seed:
+            <input
+                name="randomSeed"
+                type="number"
+                placeholder="100"
+                value={randomSeed}
+                onChange={(e) => setRandomSeed(+e.target.value)} />
+        </label>
+
+        <TokensGrid data={workingTokens} tokensModifiedCallback={
+            (newTokens) => { onWorkingTokensModified(newTokens) }
+        } />
+        { workingAudioBuffer && <WavesurferPanel id={"working"} audioBuffer={workingAudioBuffer} />}
+
     </div>
 
 }

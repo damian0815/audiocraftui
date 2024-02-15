@@ -47,7 +47,7 @@ export function AudioFileDropZone({gotFile} : {gotFile: (file: File) => void}) {
     })
 
     return (
-        <div {...getRootProps()}>
+        <div className={"audio-drop-zone"} {...getRootProps()}>
             <input {...getInputProps()} />
             {
                 isDragActive ?

@@ -41,6 +41,16 @@
   color: #888;
 }
 
+.audio-drop-zone {
+  margin: auto;
+  padding: 10px;
+  border: 1px gray solid;
+  width: 200px;
+  height: 80px;
+  vertical-align: center;
+  background-color: whitesmoke;
+}
+
 .token-grid {
   display: grid;
   grid-column-gap: 0;
@@ -73,4 +83,11 @@
 .token-grid .element .half#lsb {
   vertical-align: top;
   height: 75%;
+}
+
+.horizontal-slider {
+  margin: auto;
+  height: 20px;
+  width: 75%;
+  border: 1px solid black;
 }

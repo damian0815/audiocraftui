@@ -123,7 +123,7 @@ def load_lm_model_magnet(file_or_url_or_id: tp.Union[Path, str], compression_mod
     pkg = load_lm_model_ckpt(file_or_url_or_id, cache_dir=cache_dir)
     cfg = OmegaConf.create(pkg['xp.cfg'])
     cfg.device = str(device)
-    if cfg.device == 'cpu':
+    if cfg.device == 'cpu' or cfg.device == 'mps':
         cfg.dtype = 'float32'
     else:
         cfg.dtype = 'float16'

@@ -4,15 +4,14 @@ import torch
 import soundfile as sf
 
 from audiocraft_wrapper import AudiocraftWrapper
-from audiocraft.data.audio_utils import convert_audio
 
 
-class MyTestCase(unittest.TestCase):
+class MusicGenTokenizeTests(unittest.TestCase):
 
     def __init__(self, methodName):
         super().__init__(methodName)
-        print("loading audiocraft model...")
-        self.audiocraft_wrapper = AudiocraftWrapper()
+        print("loading audiocraft MusicGen model...")
+        self.audiocraft_wrapper = AudiocraftWrapper.from_musicgen_pretrained()
         print("loaded")
 
     def test_encode(self):
@@ -65,5 +64,19 @@ class MyTestCase(unittest.TestCase):
         self.assertTrue(torch.equal(tokens_again, expected_tokens))
 
 
+class MAGNeTTokenizeTests(unittest.TestCase):
+
+    def __init__(self, methodName):
+        super().__init__(methodName)
+        print("loading audiocraft MAGNeT model...")
+        self.audiocraft_wrapper = AudiocraftWrapper.from_magnet_pretrained()
+        print("loaded")
+
+
+
+
+
+
 if __name__ == '__main__':
+
     unittest.main()

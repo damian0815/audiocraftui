@@ -2,9 +2,6 @@ import { v4 as uuid } from 'uuid'
 import {socket as Socket} from "./socket.ts";
 import {ToneAudioBuffer} from "tone";
 
-import { encode, Encoder } from "msgpack-ts"
-import {call} from "audiobuffer-to-wav";
-import {type} from "os";
 
 function platformIsLittleEndian() {
     var arrayBuffer = new ArrayBuffer(2);
@@ -17,7 +14,7 @@ function platformIsLittleEndian() {
     else throw new Error("Something crazy just happened");
 }
 
-function swapBytes32InPlace(buf) {
+function swapBytes32InPlace(buf: any) {
     var bytes = new Uint8Array(buf);
     var len = bytes.length;
     var holder;
@@ -35,11 +32,13 @@ function swapBytes32InPlace(buf) {
 
 export class Audiocraft {
     private socket: typeof Socket;
+    private modelType: String;
     private requestCallbackStorage: Map<String, (x: any) => void> = new Map();
     private maxLengthSeconds = 4.0
 
-    constructor(socket) {
+    constructor(socket: typeof Socket, modelType: String='musicgen') {
         this.socket = socket
+        this.modelType = modelType
 
         const self=this
         this.socket.on('tokenizeResponse', function (ret) {
@@ -56,6 +55,14 @@ export class Audiocraft {
             const is_little_endian = ret['audioIsLittleEndian']
             const sample_rate = ret['sample_rate']
             self._handleDetokenizeResponse(uuid, audio_float32_bytes, is_little_endian, sample_rate)
+        })
+
+        this.socket.on('generateProgress', function (ret) {
+            console.log("got generateProgress", ret)
+            const uuid = ret['uuid']
+            const tokens = ret['tokens']
+            self._handleGenerateProgress(uuid, tokens);
+
         })
     }
 
@@ -74,6 +81,7 @@ export class Audiocraft {
         console.log('now emitting "tokenize" on', this.socket, "with", bufferArray)
 
         this.socket.emit('tokenize', {
+            'modelType': this.modelType,
             'uuid': requestUuid,
             'audioFloat32Bytes': bufferArray.buffer,
             'audioIsLittleEndian': platformIsLittleEndian(),
@@ -94,10 +102,33 @@ export class Audiocraft {
         }
     }
 
+    generate(prompt: string, callback: (tokens: [][]) => void) {
+        const requestUuid = uuid()
+        this.requestCallbackStorage.set(requestUuid, callback)
+        console.log("generate request with prompt", prompt, "uuid", requestUuid)
+        this.socket.emit('generate', {
+            'modelType': this.modelType,
+            "uuid": requestUuid,
+            "prompt": prompt
+        })
+    }
+
+    _handleGenerateProgress(uuid: string, tokens: any[]) {
+        const callback = this.requestCallbackStorage.get(uuid)
+        if (callback) {
+            console.log("generate callback with", tokens)
+            callback(tokens)
+        } else {
+            console.log('no registered callback for', uuid)
+        }
+    }
+
+
     detokenize(tokens: number[][], desiredSampleRate: number, callback: (x: any) => void) {
         const requestUuid = uuid()
         this.requestCallbackStorage.set(requestUuid, callback)
         this.socket.emit('detokenize', {
+            'modelType': this.modelType,
             'uuid': requestUuid,
             'tokens': tokens,
             'desiredSampleRate': desiredSampleRate

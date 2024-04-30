@@ -1,3 +1,6 @@
+import threading
+from typing import Callable
+
 from audiocraft.data.audio_utils import convert_audio
 from audiocraft.models import MusicGen
 from audiocraft.models import MAGNeT
@@ -8,6 +11,7 @@ from audiocraft.models.genmodel import BaseGenModel
 class AudiocraftWrapper():
 
     audiocraft_sample_rate = 32000
+    lock = threading.Lock()
 
     @classmethod
     def from_musicgen_pretrained(cls, model_id: str='facebook/musicgen-small', device: str="cpu"):
@@ -24,7 +28,7 @@ class AudiocraftWrapper():
         self.model = model
 
     def resample_audio(self, audio_data: torch.FloatTensor, current_sample_rate: int, new_sample_rate: int) -> torch.Tensor:
-        resampled_audio = convert_audio(audio_data, current_sample_rate, new_sample_rate)
+        resampled_audio = convert_audio(audio_data, current_sample_rate, new_sample_rate, to_channels=1)
         return resampled_audio
 
 
@@ -45,7 +49,7 @@ class AudiocraftWrapper():
         with torch.no_grad():
             if len(tokens.shape) != 3 or tokens.shape[0] != 1 or tokens.shape[1] != 4:
                 raise ValueError(f"bad tokens shape, expected (1,4,N), got {tokens.shape}")
-            res = self.model.compression_model.decode(tokens)
+            res = self.model.compression_model.decode(tokens, force_cpu_elu=True)
             return res
 
     def generate_tokens_from_audio(self, audio: torch.Tensor) -> torch.Tensor:
@@ -55,3 +59,24 @@ class AudiocraftWrapper():
             res = self.model.compression_model.encode(audio)[0]
             return res
 
+
+    def generate_magnet_tokens(self, prompt: str, progress_callback: Callable[[int, int, torch.Tensor], None]) -> torch.Tensor:
+        with torch.no_grad():
+            self.model.set_generation_params(
+                use_sampling=False,
+                top_k=0,
+                top_p=0.9,
+                temperature=3.0,
+                max_cfg_coef=10.0,
+                min_cfg_coef=1.0,
+                decoding_steps=[int(20 * self.model.lm.cfg.dataset.segment_duration // 10), 10, 10, 10],
+                span_arrangement='stride1'
+            )
+
+            with self.lock:
+                self.model.set_custom_progress_callback(progress_callback)
+                output = self.model.generate(descriptions=[prompt], progress=True, return_tokens=True)
+                #audio_output = model.compression_model.decode(output[1], force_cpu_elu=True)
+                #display_audio(audio_output, sample_rate=model.compression_model.sample_rate)
+                self.model.set_custom_progress_callback(None)
+                return output[1]

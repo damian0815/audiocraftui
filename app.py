@@ -1,4 +1,5 @@
 import struct
+from typing import Optional
 
 import msgpack
 import torch
@@ -19,6 +20,15 @@ def on_connect():
 def on_disconnect():
     print("disconnected")
 
+@socketio.on("generate")
+def on_generate(data):
+    print("generating with data", data)
+    def progress_callback(i: int, count: int, tokens: torch.Tensor):
+        progress_args = { "uuid": data['uuid'], "i": i, "count": count, "tokens": tokens[0].tolist() }
+        #print("generate progress:", progress_args)
+        emit("generateProgress", progress_args)
+    get_audiocraft_wrapper(data['modelType']).generate_magnet_tokens(data['prompt'], progress_callback=progress_callback)
+
 
 @socketio.on("foo")
 def foo_event():
@@ -32,12 +42,17 @@ def foo_event():
 def set_tokens_event(data):
     print("got set_tokens:", data)
 
-audiocraft_wrapper = None
-def get_audiocraft_wrapper():
+audiocraft_wrapper: Optional[AudiocraftWrapper] = None
+def get_audiocraft_wrapper(type: str = 'musicgen') -> AudiocraftWrapper:
+    if type not in ['magnet', 'musicgen']:
+        raise ValueError("type must be 'magnet' or 'musicgen'")
     global audiocraft_wrapper
     if audiocraft_wrapper is None:
-        print("building audiocraft wrapper...")
-        audiocraft_wrapper = AudiocraftWrapper()
+        print(f"building {type} audiocraft wrapper...")
+        if type == 'musicgen':
+            audiocraft_wrapper = AudiocraftWrapper.from_musicgen_pretrained()
+        elif type == 'magnet':
+            audiocraft_wrapper = AudiocraftWrapper.from_magnet_pretrained()
     return audiocraft_wrapper
 
 
@@ -68,8 +83,8 @@ def tokenize_event(data):
     audio_tensor = torch.tensor(audio_data).unsqueeze(0)
     print(f"resulting audio tensor {audio_tensor}, shape {audio_tensor.shape}")
 
-    resampled_audio = get_audiocraft_wrapper().prepare_audio_for_tokenization(audio_tensor, sample_rate=sample_rate)
-    tokens = get_audiocraft_wrapper().generate_tokens_from_audio(resampled_audio)
+    resampled_audio = get_audiocraft_wrapper(data['modelType']).prepare_audio_for_tokenization(audio_tensor, sample_rate=sample_rate)
+    tokens = get_audiocraft_wrapper(data['modelType']).generate_tokens_from_audio(resampled_audio)
     print("tokenized to ", tokens)
 
     sid = request.sid
@@ -81,10 +96,10 @@ def detokenize_event(data):
     print(f"request to tokenize, data is {type(data)} and has len {len(data)}, keys {data.keys()}")
     tokens = data['tokens']
     tokens_tensor = torch.tensor(tokens, dtype=torch.int).unsqueeze(0)
-    audio = get_audiocraft_wrapper().generate_audio_from_tokens(tokens_tensor)
+    audio = get_audiocraft_wrapper(data['modelType']).generate_audio_from_tokens(tokens_tensor)
     sample_rate = data['desiredSampleRate']
-    audio = get_audiocraft_wrapper().resample_audio(audio,
-                                                    current_sample_rate=get_audiocraft_wrapper().audiocraft_sample_rate,
+    audio = get_audiocraft_wrapper(data['modelType']).resample_audio(audio,
+                                                    current_sample_rate=get_audiocraft_wrapper(data['modelType']).audiocraft_sample_rate,
                                                     new_sample_rate=sample_rate)
     print("detokenized to", audio)
 

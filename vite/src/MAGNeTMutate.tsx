@@ -1,16 +1,16 @@
 
 import { socket } from './system/socket.ts'
 import {ConnectionManager} from "./components/ConnectionManager.tsx";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {TokensGrid} from "./components/TokensGrid.tsx";
 
 import {Audiocraft} from './system/Audiocraft.tsx';
 import {WavesurferPanel} from "./components/WavesurferPanel.tsx";
 import {ToneAudioBuffer} from "tone";
 
-const audiocraft = new Audiocraft(socket, 'magnet');
-
 function MAGNeTMutate() {
+
+    const audiocraft = Audiocraft.getInstance(socket, 'magnet')
 
     const [isConnected, setIsConnected] = useState(socket.connected);
     const [tokens, setTokens] = useState<[][]>([]);
@@ -53,7 +53,7 @@ function MAGNeTMutate() {
     function generate() {
         if (prompt.trim().length > 0) {
             console.log(`sending generate with prompt '${prompt}'`)
-            audiocraft.generate(prompt, (tokens: [][]) => {
+            audiocraft!.generate(prompt, (tokens: [][]) => {
                 console.log("generate progress tokens:", tokens)
                 setTokens(tokens);
             })
@@ -62,7 +62,7 @@ function MAGNeTMutate() {
 
     function decode() {
         if (tokens.length > 0) {
-            audiocraft.detokenize(tokens, ToneAudioBuffer.prototype.sampleRate, (audioFloats: Float32Array) => {
+            audiocraft!.detokenize(tokens, ToneAudioBuffer.prototype.sampleRate, (audioFloats: Float32Array) => {
                 const audio = ToneAudioBuffer.fromArray(audioFloats)
                 console.log("detokenized to", audio, "buffer", audio.get(), "->assigning to workingAudioBuffer")
                 setWorkingAudioBuffer(audio)

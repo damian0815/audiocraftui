@@ -31,14 +31,30 @@ function swapBytes32InPlace(buf: any) {
 }
 
 export class Audiocraft {
+
+    private static instance: Audiocraft = null;
+    public static getInstance(socket, modelType) {
+        if (Audiocraft.instance) {
+            if (Audiocraft.instance.modelType != modelType) {
+                console.error("model type mismatch, wanted", modelType, "have", Audiocraft.instance.modelType)
+                return null
+            }
+        } else {
+            Audiocraft.instance = new Audiocraft(socket, modelType);
+        }
+        return Audiocraft.instance;
+    }
+
     private socket: typeof Socket;
     private modelType: String;
     private requestCallbackStorage: Map<String, (x: any) => void> = new Map();
     private maxLengthSeconds = 4.0
 
-    constructor(socket: typeof Socket, modelType: String='musicgen') {
+    private constructor(socket: typeof Socket, modelType: String='musicgen') {
         this.socket = socket
         this.modelType = modelType
+
+        console.log("in audiocraft constructor")
 
         const self=this
         this.socket.on('tokenizeResponse', function (ret) {
@@ -52,9 +68,9 @@ export class Audiocraft {
             console.log('got detokenizeResponse', ret)
             const uuid = ret['uuid']
             const audio_float32_bytes = ret['audioFloat32Bytes']
-            const is_little_endian = ret['audioIsLittleEndian']
+            // const is_little_endian = ret['audioIsLittleEndian']
             const sample_rate = ret['sample_rate']
-            self._handleDetokenizeResponse(uuid, audio_float32_bytes, is_little_endian, sample_rate)
+            self._handleDetokenizeResponse(uuid, audio_float32_bytes, sample_rate)
         })
 
         this.socket.on('generateProgress', function (ret) {
@@ -113,11 +129,14 @@ export class Audiocraft {
         })
     }
 
-    _handleGenerateProgress(uuid: string, tokens: any[]) {
+    _handleGenerateProgress(uuid: string, tokens: any[], complete: boolean) {
         const callback = this.requestCallbackStorage.get(uuid)
         if (callback) {
             console.log("generate callback with", tokens)
             callback(tokens)
+            if (complete) {
+                this.requestCallbackStorage.delete(uuid)
+            }
         } else {
             console.log('no registered callback for', uuid)
         }
@@ -131,17 +150,14 @@ export class Audiocraft {
             'modelType': this.modelType,
             'uuid': requestUuid,
             'tokens': tokens,
-            'desiredSampleRate': desiredSampleRate
+            'desiredSampleRate': desiredSampleRate,
+            'audioIsLittleEndian': platformIsLittleEndian()
         })
     }
 
-    _handleDetokenizeResponse(uuid: string, audioFloat32Bytes: ArrayBuffer, audioIsLittleEndian: boolean) {
+    _handleDetokenizeResponse(uuid: string, audioFloat32Bytes: ArrayBuffer) {
         console.log('in detokenizeResponse handler: audio', audioFloat32Bytes)
         const callback = this.requestCallbackStorage.get(uuid)
-
-        if (audioIsLittleEndian != platformIsLittleEndian()) {
-            swapBytes32InPlace(audioFloat32Bytes)
-        }
 
         const audio = new Float32Array(audioFloat32Bytes)
         //const audio =

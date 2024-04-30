@@ -1,4 +1,5 @@
 import threading
+import wave
 from typing import Callable
 
 from audiocraft.data.audio_utils import convert_audio
@@ -6,6 +7,15 @@ from audiocraft.models import MusicGen
 from audiocraft.models import MAGNeT
 import torch
 from audiocraft.models.genmodel import BaseGenModel
+
+def save_wave_file(audio: torch.Tensor, samplerate: int, wave_file_name: str):
+    audio = (audio.detach().cpu().numpy() * (2 ** 15 - 1)).astype("<h")
+    with wave.open(wave_file_name, "wb") as f:
+        f.setnchannels(1)
+        # 2 bytes per sample.
+        f.setsampwidth(2)
+        f.setframerate(samplerate)
+        f.writeframes(audio.tobytes())
 
 
 class AudiocraftWrapper():
@@ -15,12 +25,12 @@ class AudiocraftWrapper():
 
     @classmethod
     def from_musicgen_pretrained(cls, model_id: str='facebook/musicgen-small', device: str="cpu"):
-        model = MusicGen.get_pretrained(model_id)
+        model = MusicGen.get_pretrained(model_id, device=device)
         return AudiocraftWrapper(model=model)
 
     @classmethod
     def from_magnet_pretrained(cls, model_id: str='facebook/magnet-small-10secs', device: str="cpu"):
-        model = MAGNeT.get_pretrained(model_id)
+        model = MAGNeT.get_pretrained(model_id, device=device)
         return AudiocraftWrapper(model=model)
 
     def __init__(self, model: BaseGenModel):
@@ -63,7 +73,7 @@ class AudiocraftWrapper():
     def generate_magnet_tokens(self, prompt: str, progress_callback: Callable[[int, int, torch.Tensor], None]) -> torch.Tensor:
         with torch.no_grad():
             self.model.set_generation_params(
-                use_sampling=False,
+                use_sampling=True,
                 top_k=0,
                 top_p=0.9,
                 temperature=3.0,

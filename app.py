@@ -1,3 +1,4 @@
+import os
 import struct
 from typing import Optional
 
@@ -6,11 +7,13 @@ import torch
 from flask import Flask,render_template,request
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS, cross_origin
-from audiocraft_wrapper import AudiocraftWrapper
+from audiocraft_wrapper import AudiocraftWrapper, save_wave_file
 
 app = Flask(__name__)
 socketio = SocketIO(app,debug=True,cors_allowed_origins='*')
 CORS(app)
+
+default_device = os.environ.get('DEVICE', 'cpu')
 
 @socketio.on("connect")
 def on_connect():
@@ -43,16 +46,16 @@ def set_tokens_event(data):
     print("got set_tokens:", data)
 
 audiocraft_wrapper: Optional[AudiocraftWrapper] = None
-def get_audiocraft_wrapper(type: str = 'musicgen') -> AudiocraftWrapper:
+def get_audiocraft_wrapper(type: str = 'musicgen', device: str = default_device) -> AudiocraftWrapper:
     if type not in ['magnet', 'musicgen']:
         raise ValueError("type must be 'magnet' or 'musicgen'")
     global audiocraft_wrapper
     if audiocraft_wrapper is None:
-        print(f"building {type} audiocraft wrapper...")
+        print(f"building {type} audiocraft wrapper on {device}...")
         if type == 'musicgen':
-            audiocraft_wrapper = AudiocraftWrapper.from_musicgen_pretrained()
+            audiocraft_wrapper = AudiocraftWrapper.from_musicgen_pretrained(device=device)
         elif type == 'magnet':
-            audiocraft_wrapper = AudiocraftWrapper.from_magnet_pretrained()
+            audiocraft_wrapper = AudiocraftWrapper.from_magnet_pretrained(device=device)
     return audiocraft_wrapper
 
 
@@ -93,23 +96,29 @@ def tokenize_event(data):
 
 @socketio.on('detokenize')
 def detokenize_event(data):
-    print(f"request to tokenize, data is {type(data)} and has len {len(data)}, keys {data.keys()}")
+    print(f"request to detokenize, data is {type(data)} and has len {len(data)}, keys {data.keys()}")
     tokens = data['tokens']
-    tokens_tensor = torch.tensor(tokens, dtype=torch.int).unsqueeze(0)
-    audio = get_audiocraft_wrapper(data['modelType']).generate_audio_from_tokens(tokens_tensor)
+    audiocraft_wrapper = get_audiocraft_wrapper(data['modelType'])
+    tokens_tensor = torch.tensor(tokens, dtype=torch.int, device=audiocraft_wrapper.model.device).unsqueeze(0)
+    print(" -> tokens tensor shape", tokens_tensor.shape)
+    print(" -> tokens tensor head", tokens_tensor[0, 0, :20])
+    audio = audiocraft_wrapper.generate_audio_from_tokens(tokens_tensor)
     sample_rate = data['desiredSampleRate']
     audio = get_audiocraft_wrapper(data['modelType']).resample_audio(audio,
-                                                    current_sample_rate=get_audiocraft_wrapper(data['modelType']).audiocraft_sample_rate,
+                                                    current_sample_rate=audiocraft_wrapper.audiocraft_sample_rate,
                                                     new_sample_rate=sample_rate)
-    print("detokenized to", audio)
+    print("detokenized and converted to",
+          ("little-endian" if data['audioIsLittleEndian'] else "big-endian"),
+          "audio tensor with shape", audio.shape,
+          ":", audio)
 
-    packed_floats = pack_32bit_float_array(audio[0][0].tolist(), to_little_endian=False)
+    save_wave_file(audio, sample_rate, "/tmp/detokenized_audio.wav")
+    packed_floats = pack_32bit_float_array(audio[0][0].tolist(), to_little_endian=data['audioIsLittleEndian'])
     #print("packed to", packed_floats)
     sid = request.sid
     emit('detokenizeResponse', {
         'uuid': data['uuid'],
-        'audioFloat32Bytes': packed_floats,
-        'audioIsLittleEndian': False
+        'audioFloat32Bytes': packed_floats
     }, room=sid)
 
 print("extensions: ", app.extensions)

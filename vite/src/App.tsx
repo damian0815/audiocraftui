@@ -3,6 +3,7 @@ import {Link, Route, Routes} from "react-router-dom";
 import './App.css'
 import TokenizerPlayground from "./TokenizerPlayground.tsx";
 import MAGNeTMutate from "./MAGNeTMutate.tsx";
+import {Audiocraft} from "./system/Audiocraft.tsx";
 
 function App() {
     //const [fooEvents, setFooEvents] = useState([]);

@@ -11,8 +11,6 @@ import ReactSlider from "react-slider";
 import {cloneArray} from "../system/cloneArray.tsx";
 import {shuffle} from "../system/seedRandom.ts"
 
-const audiocraft = new Audiocraft(socket)
-
 function useTraceUpdate(props) {
   const prev = useRef(props);
   useEffect(() => {
@@ -43,6 +41,8 @@ class AudioRegion {
 const MAX_DURATION = 4
 
 export function AudioSystem() {
+
+    const audiocraft = Audiocraft.getInstance(socket, 'musicgen');
 
     const [tokens, setTokens] = useState<number[][][]>([[[]], [[]]])
     const [workingTokens, setWorkingTokens] = useState<number[][]>([[]])
@@ -85,7 +85,7 @@ export function AudioSystem() {
 
     function debouncedDetokenize(tokens: number[][], desiredSampleRate: number, callback: (x: any) => void) {
         debounce(() => {
-            audiocraft.detokenize(tokens, desiredSampleRate, callback)
+            audiocraft.current.detokenize(tokens, desiredSampleRate, callback)
         }, 1000)()
     }
 

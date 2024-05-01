@@ -1,12 +1,15 @@
 
 import { socket } from './system/socket.ts'
 import {ConnectionManager} from "./components/ConnectionManager.tsx";
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useState} from "react";
 import {TokensGrid} from "./components/TokensGrid.tsx";
 
 import {Audiocraft} from './system/Audiocraft.tsx';
 import {WavesurferPanel} from "./components/WavesurferPanel.tsx";
 import {ToneAudioBuffer} from "tone";
+import InputNumber from "rc-input-number";
+
+import "./MAGNeTMutate.css"
 
 function MAGNeTMutate() {
 
@@ -14,7 +17,16 @@ function MAGNeTMutate() {
 
     const [isConnected, setIsConnected] = useState(socket.connected);
     const [tokens, setTokens] = useState<[][]>([]);
+    const [generationUuid, setGenerationUuid] = useState<string|undefined>()
+    const [progress, setProgress] = useState<number|undefined>()
+
     const [prompt, setPrompt] = useState<string>("");
+    const [seed, setSeed] = useState<number>(0);
+    const [stepsA, setStepsA] = useState<number>(20);
+    const [stepsB, setStepsB] = useState<number>(10);
+    const [stepsC, setStepsC] = useState<number>(10);
+    const [stepsD, setStepsD] = useState<number>(10);
+
     const [workingAudioBuffer, setWorkingAudioBuffer] = useState<ToneAudioBuffer>();
 
     useEffect(() => {
@@ -53,11 +65,27 @@ function MAGNeTMutate() {
     function generate() {
         if (prompt.trim().length > 0) {
             console.log(`sending generate with prompt '${prompt}'`)
-            audiocraft!.generate(prompt, (tokens: [][]) => {
-                console.log("generate progress tokens:", tokens)
+            const steps = [stepsA, stepsB, stepsC, stepsD];
+            const uuid = audiocraft!.generate(prompt, seed, steps, (progressPct, tokens: [][]) => {
+                if (!tokens) {
+                    setGenerationUuid(undefined)
+                    return
+                }
+                setProgress(progressPct);
+                console.log("generate progress tokens:", tokens);
                 setTokens(tokens);
+
+                if (progressPct == 1) {
+                    setGenerationUuid(undefined)
+                }
             })
+            setProgress(0);
+            setGenerationUuid(uuid);
         }
+    }
+
+    function cancelGeneration() {
+        generationUuid && audiocraft!.cancelGeneration(generationUuid)
     }
 
     function decode() {
@@ -75,9 +103,20 @@ function MAGNeTMutate() {
             <h1>MAGNeT Mutation</h1>
             <div>
                 <div><textarea placeholder={"enter prompt"} onChange={(e) => setPrompt(e.target.value)}></textarea></div>
-                <button onClick={ generate }>Generate</button>
+                <div className={"seed"}>Seed:
+                    <InputNumber value={seed} onChange={(value) => value && setSeed(value) }/>
+                </div>
+                <div className={"steps"}>Steps:
+                    <InputNumber value={stepsA} onChange={(value) => value && setStepsA(value)} />
+                    <InputNumber value={stepsB} onChange={(value) => value && setStepsB(value)} />
+                    <InputNumber value={stepsC} onChange={(value) => value && setStepsC(value)} />
+                    <InputNumber value={stepsD} onChange={(value) => value && setStepsD(value)} />
+                </div>
+                { generationUuid && progress && <progress value={ progress } /> }
+                { generationUuid && <button onClick={ cancelGeneration }>Cancel</button> }
+                { !generationUuid && <button onClick={ generate }>Generate</button> }
             </div>
-            <TokensGrid data={tokens} tokensModifiedCallback={() => {}} />
+            <TokensGrid data={tokens} />
             <button onClick={ decode }>Decode</button>
             { workingAudioBuffer && <WavesurferPanel id={"working"} audioBuffer={workingAudioBuffer} /> }
 

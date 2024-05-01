@@ -1,0 +1,21 @@
+div.steps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+div.seed {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+div.seed input {
+    width: 80px;
+    margin: 5px;
+}
+
+div.steps input {
+    width: 30px;
+    margin: 5px;
+}

@@ -47,7 +47,7 @@ export class Audiocraft {
 
     private socket: typeof Socket;
     private modelType: String;
-    private requestCallbackStorage: Map<String, (x: any) => void> = new Map();
+    private requestCallbackStorage: Map<String, (... args: any[]) => void> = new Map();
     private maxLengthSeconds = 4.0
 
     private constructor(socket: typeof Socket, modelType: String='musicgen') {
@@ -77,8 +77,9 @@ export class Audiocraft {
             console.log("got generateProgress", ret)
             const uuid = ret['uuid']
             const tokens = ret['tokens']
-            self._handleGenerateProgress(uuid, tokens);
-
+            const i = ret['i']
+            const count = ret['count']
+            self._handleGenerateProgress(uuid, i, count, tokens);
         })
     }
 
@@ -118,24 +119,41 @@ export class Audiocraft {
         }
     }
 
-    generate(prompt: string, callback: (tokens: [][]) => void) {
+    generate(prompt: string,
+             seed: number,
+             steps: number[],
+             callback: (progressPct: number, tokens: [][]) => void): string {
         const requestUuid = uuid()
         this.requestCallbackStorage.set(requestUuid, callback)
         console.log("generate request with prompt", prompt, "uuid", requestUuid)
         this.socket.emit('generate', {
-            'modelType': this.modelType,
+            "modelType": this.modelType,
+            "seed": seed,
+            "steps": steps,
             "uuid": requestUuid,
             "prompt": prompt
         })
+        return requestUuid
     }
 
-    _handleGenerateProgress(uuid: string, tokens: any[], complete: boolean) {
+    cancelGeneration(requestUuid: string) {
+        this.socket.emit('cancelGeneration', {
+            'uuid': requestUuid
+        })
+    }
+
+    _handleGenerateProgress(uuid: string, stepNumber: number, totalSteps: number, tokens: any[]) {
         const callback = this.requestCallbackStorage.get(uuid)
         if (callback) {
             console.log("generate callback with", tokens)
-            callback(tokens)
-            if (complete) {
+            if (!tokens) {
+                callback(0, null)
                 this.requestCallbackStorage.delete(uuid)
+            } else {
+                callback(stepNumber / totalSteps, tokens)
+                if (stepNumber == totalSteps) {
+                    this.requestCallbackStorage.delete(uuid)
+                }
             }
         } else {
             console.log('no registered callback for', uuid)

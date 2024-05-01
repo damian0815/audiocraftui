@@ -23,7 +23,7 @@ function GridRow({data}: {data: number[]}) {
 
 type TokensGridProps = {
     data: number[][];
-    tokensModifiedCallback?: (tokens: number[][]) => void
+    tokensModifiedCallback?: (tokens: number[][]) => void;
 }
 
 export function TokensGrid(props: TokensGridProps) {

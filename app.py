@@ -14,6 +14,7 @@ socketio = SocketIO(app,debug=True,cors_allowed_origins='*')
 CORS(app)
 
 default_device = os.environ.get('DEVICE', 'cpu')
+default_model_magnet = os.environ.get('MODEL_MAGNET', 'facebook/magnet-small-10secs')
 
 @socketio.on("connect")
 def on_connect():
@@ -26,12 +27,25 @@ def on_disconnect():
 @socketio.on("generate")
 def on_generate(data):
     print("generating with data", data)
+    uuid = data['uuid']
+    model_type = data['modelType']
+    prompt = data['prompt']
+    seed = data['seed']
+    steps = data['steps']
     def progress_callback(i: int, count: int, tokens: torch.Tensor):
-        progress_args = { "uuid": data['uuid'], "i": i, "count": count, "tokens": tokens[0].tolist() }
+        progress_args = { "uuid": uuid,
+                          "i": i,
+                          "count": count,
+                          "tokens": None if tokens is None else tokens[0].tolist() }
         #print("generate progress:", progress_args)
         emit("generateProgress", progress_args)
-    get_audiocraft_wrapper(data['modelType']).generate_magnet_tokens(data['prompt'], progress_callback=progress_callback)
+    get_audiocraft_wrapper(model_type).generate_magnet_tokens(
+        prompt, request_uuid=uuid, seed=seed, steps=steps, progress_callback=progress_callback)
 
+@socketio.on("cancelGeneration")
+def on_cancel_generation(data):
+    print("requesting cancel with data", data)
+    get_audiocraft_wrapper().request_cancel_generation(data['uuid'])
 
 @socketio.on("foo")
 def foo_event():
@@ -55,7 +69,7 @@ def get_audiocraft_wrapper(type: str = 'musicgen', device: str = default_device)
         if type == 'musicgen':
             audiocraft_wrapper = AudiocraftWrapper.from_musicgen_pretrained(device=device)
         elif type == 'magnet':
-            audiocraft_wrapper = AudiocraftWrapper.from_magnet_pretrained(device=device)
+            audiocraft_wrapper = AudiocraftWrapper.from_magnet_pretrained(device=device, model_id=default_model_magnet)
     return audiocraft_wrapper
 
 

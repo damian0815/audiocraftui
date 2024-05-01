@@ -19,6 +19,7 @@ export interface ClientToServerEvents {
     tokenize: (data: any) => void
     detokenize: (data: any) => void
     generate: (data: any) => void
+    cancelGeneration: (data: any) => void
 }
 
 export interface SocketData {

@@ -1,5 +1,6 @@
 import threading
 import wave
+import random
 from typing import Callable
 
 from audiocraft.data.audio_utils import convert_audio
@@ -21,7 +22,6 @@ def save_wave_file(audio: torch.Tensor, samplerate: int, wave_file_name: str):
 class AudiocraftWrapper():
 
     audiocraft_sample_rate = 32000
-    lock = threading.Lock()
 
     @classmethod
     def from_musicgen_pretrained(cls, model_id: str='facebook/musicgen-small', device: str="cpu"):
@@ -36,6 +36,8 @@ class AudiocraftWrapper():
     def __init__(self, model: BaseGenModel):
         # Using small model, better results would be obtained with `medium` or `large`.
         self.model = model
+        self.lock = threading.Lock()
+        self.cancelled_uuids = list()
 
     def resample_audio(self, audio_data: torch.FloatTensor, current_sample_rate: int, new_sample_rate: int) -> torch.Tensor:
         resampled_audio = convert_audio(audio_data, current_sample_rate, new_sample_rate, to_channels=1)
@@ -70,7 +72,12 @@ class AudiocraftWrapper():
             return res
 
 
-    def generate_magnet_tokens(self, prompt: str, progress_callback: Callable[[int, int, torch.Tensor], None]) -> torch.Tensor:
+    def generate_magnet_tokens(self,
+                               prompt: str,
+                               request_uuid: str,
+                               seed: int,
+                               steps: list[int],
+                               progress_callback: Callable[[int, int, torch.Tensor], None]) -> torch.Tensor:
         with torch.no_grad():
             self.model.set_generation_params(
                 use_sampling=True,
@@ -79,14 +86,31 @@ class AudiocraftWrapper():
                 temperature=3.0,
                 max_cfg_coef=10.0,
                 min_cfg_coef=1.0,
-                decoding_steps=[int(20 * self.model.lm.cfg.dataset.segment_duration // 10), 10, 10, 10],
+                #decoding_steps=[int(20 * self.model.lm.cfg.dataset.segment_duration // 10), 10, 10, 10],
+                decoding_steps=steps,
                 span_arrangement='stride1'
             )
 
+            def cancellation_callback():
+                should_cancel = request_uuid in self.cancelled_uuids
+                print(f"should cancel: {should_cancel}, because: request_uuid {request_uuid}, cancelled_uuids {self.cancelled_uuids}")
+                return should_cancel
+
             with self.lock:
                 self.model.set_custom_progress_callback(progress_callback)
+                self.model.set_should_cancel_callback(cancellation_callback)
+                if seed is not None:
+                    random.seed(seed)
+                    torch.manual_seed(seed)
                 output = self.model.generate(descriptions=[prompt], progress=True, return_tokens=True)
                 #audio_output = model.compression_model.decode(output[1], force_cpu_elu=True)
                 #display_audio(audio_output, sample_rate=model.compression_model.sample_rate)
                 self.model.set_custom_progress_callback(None)
-                return output[1]
+                self.model.set_should_cancel_callback(None)
+                if output is None:
+                    progress_callback(0, 0, None)
+                else:
+                    return output[1]
+
+    def request_cancel_generation(self, uuid: str):
+        self.cancelled_uuids.append(uuid)

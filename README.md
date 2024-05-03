@@ -7,7 +7,7 @@ a web ui for playing around with the MusicGen tokenization and prediction featur
 ### Docker
 
 ```shell
-$ docker build --tag audiocraftui:latest https://github.com/damian0815/audiocraftui
+$ docker build --tag audiocraftui:latest https://github.com/damian0815/audiocraftui.git
 $ docker run --gpus all --rm -e DEVICE=cuda -p 4000:4000 -i -t audiocraftui:latest --host=0.0.0.0
 ```
 

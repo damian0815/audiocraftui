@@ -1,6 +1,8 @@
 FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
 LABEL authors="damian"
 
+RUN apt install git
+
 COPY ./requirements.txt /install/requirements.txt
 RUN pip install -r /install/requirements.txt
 

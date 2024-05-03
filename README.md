@@ -4,6 +4,13 @@ a web ui for playing around with the MusicGen tokenization and prediction featur
 
 ## setup
 
+### Docker
+
+```shell
+$ docker build --tag audiocraftui:latest https://github.com/damian0815/audiocraftui
+$ docker run --gpus all --rm -e DEVICE=cuda -p 4000:4000 -i -t audiocraftui:latest --host=0.0.0.0
+```
+
 ### todo: put this stuff in a docker container
 
 create venv
@@ -49,3 +56,4 @@ vite dev
 ```
 
 then navigate to [http://localhost:5173](http://localhost:5173).
+

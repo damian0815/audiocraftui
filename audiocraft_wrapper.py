@@ -77,8 +77,16 @@ class AudiocraftWrapper():
                                request_uuid: str,
                                seed: int,
                                steps: list[int],
-                               progress_callback: Callable[[int, int, torch.Tensor], None]) -> torch.Tensor:
+                               progress_callback: Callable[[int, int, torch.Tensor], None],
+                               initial_tokens: torch.Tensor = None,
+                               initial_timesteps: list[float] = None,
+                            ) -> torch.Tensor:
         with torch.no_grad():
+            initialization_kwargs = {}
+            if initial_tokens is not None:
+                initialization_kwargs['initial_tokens'] = initial_tokens
+            if initial_timesteps is not None:
+                initialization_kwargs['initial_timesteps'] = initial_timesteps
             self.model.set_generation_params(
                 use_sampling=True,
                 top_k=0,
@@ -88,7 +96,8 @@ class AudiocraftWrapper():
                 min_cfg_coef=1.0,
                 #decoding_steps=[int(20 * self.model.lm.cfg.dataset.segment_duration // 10), 10, 10, 10],
                 decoding_steps=steps,
-                span_arrangement='stride1'
+                span_arrangement='stride1',
+                **initialization_kwargs
             )
 
             def cancellation_callback():
@@ -102,7 +111,9 @@ class AudiocraftWrapper():
                 if seed is not None:
                     random.seed(seed)
                     torch.manual_seed(seed)
-                output = self.model.generate(descriptions=[prompt], progress=True, return_tokens=True)
+                output = self.model.generate(descriptions=[prompt],
+                                             progress=True,
+                                             return_tokens=True)
                 #audio_output = model.compression_model.decode(output[1], force_cpu_elu=True)
                 #display_audio(audio_output, sample_rate=model.compression_model.sample_rate)
                 self.model.set_custom_progress_callback(None)

@@ -10,4 +10,5 @@ WORKDIR /workspace/audiocraftui
 COPY app.py .
 COPY audiocraft_wrapper.py .
 
-ENTRYPOINT ["flask", "run", "--port", "4000", "--debug"]
+EXPOSE 4000
+ENTRYPOINT ["flask", "run", "--port", "4000", "--host", "0.0.0.0"]

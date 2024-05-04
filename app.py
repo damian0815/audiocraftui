@@ -32,15 +32,26 @@ def on_generate(data):
     prompt = data['prompt']
     seed = data['seed']
     steps = data['steps']
+    initial_timesteps = data.get('initial_timesteps', None)
+    initial_tokens = data.get('initial_tokens', None)
     def progress_callback(i: int, count: int, tokens: torch.Tensor):
         progress_args = { "uuid": uuid,
                           "i": i,
                           "count": count,
-                          "tokens": None if tokens is None else tokens[0].tolist() }
+                          "tokens": None if tokens is None else tokens[0].tolist(),
+                          "masks": None,# if masks is None else masks[0].tolist()
+                        }
         #print("generate progress:", progress_args)
         emit("generateProgress", progress_args)
     get_audiocraft_wrapper(model_type).generate_magnet_tokens(
-        prompt, request_uuid=uuid, seed=seed, steps=steps, progress_callback=progress_callback)
+        prompt,
+        request_uuid=uuid,
+        seed=seed,
+        steps=steps,
+        progress_callback=progress_callback,
+        initial_timesteps=initial_timesteps,
+        initial_tokens=initial_tokens
+    )
 
 @socketio.on("cancelGeneration")
 def on_cancel_generation(data):

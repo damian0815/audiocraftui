@@ -1,0 +1,28 @@
+FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
+LABEL authors="damian"
+
+RUN apt-get update && apt-get install -y git
+
+RUN apt-get install -y openssh-server
+RUN mkdir /var/run/sshd
+# Set root password for SSH access
+RUN echo 'root:audiocraftui' | chpasswd
+RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+EXPOSE 22
+
+COPY ./requirements.txt /install/requirements.txt
+RUN pip install -r /install/requirements.txt
+
+WORKDIR /workspace
+RUN git clone https://github.com/damian0815/audiocraft && \
+    cd audiocraft && \
+    git checkout token_build_progress && \
+    pip install -e .
+
+WORKDIR /workspace/audiocraftui
+COPY app.py .
+COPY audiocraft_wrapper.py .
+
+EXPOSE 4000
+ENTRYPOINT ["flask", "run", "--port", "4000", "--host", "0.0.0.0", "--debug"]

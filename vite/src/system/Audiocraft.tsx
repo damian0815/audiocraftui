@@ -122,7 +122,7 @@ export class Audiocraft {
     generate(prompt: string,
              seed: number,
              steps: number[],
-             callback: (progressPct: number, tokens: [][]) => void): string {
+             callback: (progressPct: number, tokens: [][], masks: [][]) => void): string {
         const requestUuid = uuid()
         this.requestCallbackStorage.set(requestUuid, callback)
         console.log("generate request with prompt", prompt, "uuid", requestUuid)
@@ -142,7 +142,7 @@ export class Audiocraft {
         })
     }
 
-    _handleGenerateProgress(uuid: string, stepNumber: number, totalSteps: number, tokens: any[]) {
+    _handleGenerateProgress(uuid: string, stepNumber: number, totalSteps: number, tokens: any[], masks: any[]) {
         const callback = this.requestCallbackStorage.get(uuid)
         if (callback) {
             console.log("generate callback with", tokens)
@@ -150,7 +150,7 @@ export class Audiocraft {
                 callback(0, null)
                 this.requestCallbackStorage.delete(uuid)
             } else {
-                callback(stepNumber / totalSteps, tokens)
+                callback(stepNumber / totalSteps, tokens, masks)
                 if (stepNumber == totalSteps) {
                     this.requestCallbackStorage.delete(uuid)
                 }

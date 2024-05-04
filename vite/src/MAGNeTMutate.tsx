@@ -17,6 +17,8 @@ function MAGNeTMutate() {
 
     const [isConnected, setIsConnected] = useState(socket.connected);
     const [tokens, setTokens] = useState<[][]>([]);
+    const [masks, setMasks] = useState<[][]>([]);
+
     const [generationUuid, setGenerationUuid] = useState<string|undefined>()
     const [progress, setProgress] = useState<number|undefined>()
 
@@ -66,14 +68,15 @@ function MAGNeTMutate() {
         if (prompt.trim().length > 0) {
             console.log(`sending generate with prompt '${prompt}'`)
             const steps = [stepsA, stepsB, stepsC, stepsD];
-            const uuid = audiocraft!.generate(prompt, seed, steps, (progressPct, tokens: [][]) => {
+            const uuid = audiocraft!.generate(prompt, seed, steps, (progressPct, tokens: [][], masks: [][]) => {
                 if (!tokens) {
                     setGenerationUuid(undefined)
                     return
                 }
                 setProgress(progressPct);
-                console.log("generate progress tokens:", tokens);
+                //console.log("generate progress tokens:", tokens);
                 setTokens(tokens);
+                setMasks(masks);
 
                 if (progressPct == 1) {
                     setGenerationUuid(undefined)

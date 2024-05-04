@@ -2,6 +2,8 @@ FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
 LABEL authors="damian"
 
 RUN apt-get update && apt-get install -y git
+RUN printf "tzdata tzdata/Areas select Europe\ntzdata tzdata/Zones/Europe select Vienna\n" | debconf-set-selections
+RUN DEBIAN_FRONTEND=noninteractive apt-get install tzdata
 
 RUN apt-get install -y openssh-server
 RUN mkdir /var/run/sshd

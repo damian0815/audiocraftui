@@ -1,18 +1,23 @@
 
-function GridElement({value}: {value: number}) {
+import './TokensGrid.css'
+
+function GridElement({value, width}: {value: number, width: number}) {
     const hue = 360 * value/2048
-    return <div className="element" style={{background: `hsl(${hue}, 100%, 50%)`}} />
+    return <div className="element" style={{background: `hsl(${hue}, 100%, 50%)`, width: `${width}px`}} />
 }
 
-function GridRow({data}: {data: number[]}) {
+function GridRow({data, perTokenWidth}: {data: number[], perTokenWidth: number}) {
 
     //console.log("grid row with data", data)
 
-    function renderRow(data) {
+    function renderRow(data: number[]) {
+        /*const rowItems = data.map((v, i) =>
+            <GridElement key={i} value={v} width={perTokenWidth}/>
+        )*/
         const rowItems = []
         const cols = data.length
         for (let i = 0; i < cols; i++) {
-            rowItems.push(<GridElement key={i} value={data[i]}/>)
+            rowItems.push(<GridElement key={i} value={data[i]} width={perTokenWidth}/>)
         }
         return rowItems
     }
@@ -23,12 +28,13 @@ function GridRow({data}: {data: number[]}) {
 
 type TokensGridProps = {
     data: number[][];
+    width: number;
     tokensModifiedCallback?: (tokens: number[][]) => void;
 }
 
 export function TokensGrid(props: TokensGridProps) {
 
-    const { data, tokensModifiedCallback } = props
+    const { data, width, tokensModifiedCallback } = props
 
     //console.log("TokensGrid with data", data)
     const rows = data.length
@@ -36,13 +42,14 @@ export function TokensGrid(props: TokensGridProps) {
         return <></>
     }
     const cols = data[0].length
-    //console.log(`${rows} rows, with ${cols} columns`)
+    const perTokenWidth = width/cols;
+    console.log(`${rows} rows, with ${cols} columns, per-token width ${perTokenWidth}`)
 
     function renderGrid(data: number[][]) {
         const gridItems = []
 
         for (let i = 0; i < rows; i++) {
-            gridItems.push(<GridRow key={i} data={data[i]} />)
+            gridItems.push(<GridRow key={i} data={data[i]} perTokenWidth={perTokenWidth}/>)
         }
         return gridItems;
     }

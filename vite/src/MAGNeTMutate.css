@@ -4,6 +4,23 @@ div.steps {
     align-items: center;
 }
 
+div.steps input {
+    width: 30px;
+    margin: 5px;
+}
+
+div.initial-timesteps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+div.initial-timesteps input {
+    width: 50px;
+    margin: 5px;
+}
+
+
 div.seed {
     display: flex;
     justify-content: center;
@@ -15,7 +32,3 @@ div.seed input {
     margin: 5px;
 }
 
-div.steps input {
-    width: 30px;
-    margin: 5px;
-}

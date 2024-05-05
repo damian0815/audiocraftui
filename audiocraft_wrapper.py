@@ -78,9 +78,12 @@ class AudiocraftWrapper():
                                seed: int,
                                steps: list[int],
                                progress_callback: Callable[[int, int, torch.Tensor], None],
+                               max_cfg_coef: float=10.0,
+                               min_cfg_coef: float=1.0,
                                initial_tokens: torch.Tensor = None,
                                initial_timesteps: list[float] = None,
                             ) -> torch.Tensor:
+        print("in generate - updated wrapper")
         with torch.no_grad():
             initialization_kwargs = {}
             if initial_tokens is not None:
@@ -92,8 +95,8 @@ class AudiocraftWrapper():
                 top_k=0,
                 top_p=0.9,
                 temperature=3.0,
-                max_cfg_coef=10.0,
-                min_cfg_coef=1.0,
+                max_cfg_coef=max_cfg_coef,
+                min_cfg_coef=min_cfg_coef,
                 #decoding_steps=[int(20 * self.model.lm.cfg.dataset.segment_duration // 10), 10, 10, 10],
                 decoding_steps=steps,
                 span_arrangement='stride1',

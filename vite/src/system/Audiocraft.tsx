@@ -1,6 +1,7 @@
 import { v4 as uuid } from 'uuid'
 import {socket as Socket} from "./socket.ts";
 import {ToneAudioBuffer} from "tone";
+import { cloneArray } from './cloneArray.tsx';
 
 
 function platformIsLittleEndian() {
@@ -28,6 +29,17 @@ function swapBytes32InPlace(buf: any) {
         bytes[i+1] = bytes[i+2];
         bytes[i+2] = holder;
     }
+}
+
+export function interpolateTokens(a: number[][], b: number[][], alpha: number): number[][] {
+    const result = new Array();
+    //console.assert(a.length == b.length);
+    for (var i=0; i<a.length; i++) {
+        console.log("stage", i)
+        //console.assert(a[i].length == b[i].length);
+        result.push(a[i].map((v, j) => v * (1-alpha) + b[i][j] * alpha))
+    }
+    return result;
 }
 
 export class Audiocraft {
@@ -122,7 +134,12 @@ export class Audiocraft {
     generate(prompt: string,
              seed: number,
              steps: number[],
-             callback: (progressPct: number, tokens: [][], masks: [][]) => void): string {
+             callback: (progressPct: number, tokens: [][], masks: [][]) => void,
+             initialTokens: number[][]|null = null,
+             initialTimesteps: number[]|null = null,
+             minCFGCoef: number=1,
+             maxCFGCoef: number=10,
+        ): string {
         const requestUuid = uuid()
         this.requestCallbackStorage.set(requestUuid, callback)
         console.log("generate request with prompt", prompt, "uuid", requestUuid)
@@ -131,7 +148,11 @@ export class Audiocraft {
             "seed": seed,
             "steps": steps,
             "uuid": requestUuid,
-            "prompt": prompt
+            "prompt": prompt,
+            "min_cfg_coef": minCFGCoef,
+            "max_cfg_coef": maxCFGCoef,
+            "initial_timesteps": initialTimesteps,
+            "initial_tokens": initialTokens
         })
         return requestUuid
     }

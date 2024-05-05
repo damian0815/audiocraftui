@@ -32,8 +32,12 @@ def on_generate(data):
     prompt = data['prompt']
     seed = data['seed']
     steps = data['steps']
+    max_cfg_coef = data.get('max_cfg_coef', 10.0)
+    min_cfg_coef = data.get('min_cfg_coef', 1.0)
     initial_timesteps = data.get('initial_timesteps', None)
     initial_tokens = data.get('initial_tokens', None)
+    if initial_tokens is not None:
+        initial_tokens = torch.Tensor(initial_tokens).long().unsqueeze(0)
     def progress_callback(i: int, count: int, tokens: torch.Tensor):
         progress_args = { "uuid": uuid,
                           "i": i,
@@ -49,6 +53,8 @@ def on_generate(data):
         seed=seed,
         steps=steps,
         progress_callback=progress_callback,
+        max_cfg_coef=max_cfg_coef,
+        min_cfg_coef=min_cfg_coef,
         initial_timesteps=initial_timesteps,
         initial_tokens=initial_tokens
     )

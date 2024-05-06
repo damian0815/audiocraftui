@@ -1,13 +1,16 @@
 import threading
 import wave
 import random
-from typing import Callable
+from typing import Callable, Optional
 
 from audiocraft.data.audio_utils import convert_audio
 from audiocraft.models import MusicGen
 from audiocraft.models import MAGNeT
 import torch
 from audiocraft.models.genmodel import BaseGenModel
+
+from audiocraft.modules.conditioners import ConditioningAttributes
+
 
 def save_wave_file(audio: torch.Tensor, samplerate: int, wave_file_name: str):
     audio = (audio.detach().cpu().numpy() * (2 ** 15 - 1)).astype("<h")
@@ -19,7 +22,7 @@ def save_wave_file(audio: torch.Tensor, samplerate: int, wave_file_name: str):
         f.writeframes(audio.tobytes())
 
 
-class AudiocraftWrapper():
+class AudiocraftWrapper:
 
     audiocraft_sample_rate = 32000
 
@@ -78,18 +81,20 @@ class AudiocraftWrapper():
                                seed: int,
                                steps: list[int],
                                progress_callback: Callable[[int, int, torch.Tensor], None],
+                               sticky_mask: bool=False,
                                max_cfg_coef: float=10.0,
                                min_cfg_coef: float=1.0,
                                initial_tokens: torch.Tensor = None,
-                               initial_timesteps: list[float] = None,
-                            ) -> torch.Tensor:
+                               initial_mask_pcts: Optional[list[float]] = None,
+                               final_mask_pcts: Optional[list[float]] = None,
+                               negative_prompt: str = None,
+                               ) -> torch.Tensor:
         print("in generate - updated wrapper")
         with torch.no_grad():
             initialization_kwargs = {}
             if initial_tokens is not None:
                 initialization_kwargs['initial_tokens'] = initial_tokens
-            if initial_timesteps is not None:
-                initialization_kwargs['initial_timesteps'] = initial_timesteps
+            negative_conditions = [ConditioningAttributes(text={'description': negative_prompt})] if negative_prompt else None
             self.model.set_generation_params(
                 use_sampling=True,
                 top_k=0,
@@ -100,6 +105,10 @@ class AudiocraftWrapper():
                 #decoding_steps=[int(20 * self.model.lm.cfg.dataset.segment_duration // 10), 10, 10, 10],
                 decoding_steps=steps,
                 span_arrangement='stride1',
+                sticky_mask=sticky_mask,
+                initial_mask_pcts=initial_mask_pcts or [0, 0, 0, 0],
+                final_mask_pcts=final_mask_pcts or [1, 1, 1, 1],
+                negative_conditions=negative_conditions,
                 **initialization_kwargs
             )
 

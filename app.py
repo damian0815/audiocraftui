@@ -4,6 +4,7 @@ from typing import Optional
 
 import msgpack
 import torch
+from audiocraft.modules.conditioners import ConditioningAttributes
 from flask import Flask,render_template,request
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS, cross_origin
@@ -34,10 +35,12 @@ def on_generate(data):
     steps = data['steps']
     max_cfg_coef = data.get('max_cfg_coef', 10.0)
     min_cfg_coef = data.get('min_cfg_coef', 1.0)
-    initial_timesteps = data.get('initial_timesteps', None)
+    initial_msk_pcts = data.get('initial_mask_pcts', None)
+    final_msk_pcts = data.get('final_mask_pcts', None)
     initial_tokens = data.get('initial_tokens', None)
     if initial_tokens is not None:
         initial_tokens = torch.Tensor(initial_tokens).long().unsqueeze(0)
+    negative_prompt = data.get('negative_prompt', None)
     def progress_callback(i: int, count: int, tokens: torch.Tensor):
         progress_args = { "uuid": uuid,
                           "i": i,
@@ -49,13 +52,15 @@ def on_generate(data):
         emit("generateProgress", progress_args)
     get_audiocraft_wrapper(model_type).generate_magnet_tokens(
         prompt,
+        negative_prompt=negative_prompt,
         request_uuid=uuid,
         seed=seed,
         steps=steps,
         progress_callback=progress_callback,
         max_cfg_coef=max_cfg_coef,
         min_cfg_coef=min_cfg_coef,
-        initial_timesteps=initial_timesteps,
+        initial_mask_pcts=initial_msk_pcts,
+        final_mask_pcts=final_msk_pcts,
         initial_tokens=initial_tokens
     )
 

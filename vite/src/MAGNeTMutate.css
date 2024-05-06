@@ -1,34 +1,27 @@
-div.steps {
+div.mask-pcts {
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-div.steps input {
-    width: 30px;
-    margin: 5px;
-}
-
-div.initial-timesteps {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-div.initial-timesteps input {
+div.mask-pcts input {
     width: 50px;
     margin: 5px;
 }
 
 
-div.seed {
+div.inline-input-number {
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-div.seed input {
-    width: 80px;
+div.inline-input-number input {
+    width: 30px;
     margin: 5px;
+}
+
+div.inline-input-number-80 input {
+    width: 80px;
 }
 

@@ -86,7 +86,7 @@ export class Audiocraft {
         })
 
         this.socket.on('generateProgress', function (ret) {
-            console.log("got generateProgress", ret)
+            //console.log("got generateProgress", ret)
             const uuid = ret['uuid']
             const tokens = ret['tokens']
             const i = ret['i']
@@ -127,16 +127,18 @@ export class Audiocraft {
             callback(tokens)
             this.requestCallbackStorage.delete(uuid)
         } else {
-            console.log('no registered callback for', uuid)
+            //console.log('no registered callback for', uuid)
         }
     }
 
     generate(prompt: string,
+             negativePrompt: string|null,
              seed: number,
              steps: number[],
              callback: (progressPct: number, tokens: [][], masks: [][]) => void,
              initialTokens: number[][]|null = null,
-             initialTimesteps: number[]|null = null,
+             initialMaskPct: number[]|null = null,
+             finalMaskPct: number[]|null = null,
              minCFGCoef: number=1,
              maxCFGCoef: number=10,
         ): string {
@@ -151,8 +153,10 @@ export class Audiocraft {
             "prompt": prompt,
             "min_cfg_coef": minCFGCoef,
             "max_cfg_coef": maxCFGCoef,
-            "initial_timesteps": initialTimesteps,
-            "initial_tokens": initialTokens
+            "initial_mask_pcts": initialMaskPct,
+            "final_mask_pcts": finalMaskPct,
+            "initial_tokens": initialTokens,
+            "negative_prompt": negativePrompt,
         })
         return requestUuid
     }
@@ -166,7 +170,7 @@ export class Audiocraft {
     _handleGenerateProgress(uuid: string, stepNumber: number, totalSteps: number, tokens: any[], masks: any[]) {
         const callback = this.requestCallbackStorage.get(uuid)
         if (callback) {
-            console.log("generate callback with", tokens)
+            //console.log("generate callback with", tokens)
             if (!tokens) {
                 callback(0, null)
                 this.requestCallbackStorage.delete(uuid)
@@ -177,7 +181,7 @@ export class Audiocraft {
                 }
             }
         } else {
-            console.log('no registered callback for', uuid)
+            //console.log('no registered callback for', uuid)
         }
     }
 
@@ -205,7 +209,7 @@ export class Audiocraft {
             callback(audio)
             this.requestCallbackStorage.delete(uuid)
         } else {
-            console.log('no registered callback for', uuid)
+            //console.log('no registered callback for', uuid)
         }
 
     }

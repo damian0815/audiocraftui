@@ -26,21 +26,18 @@ function MAGNeTMutate() {
     const [progress, setProgress] = useState<number|undefined>()
 
     const [prompt, setPrompt] = useState<string>("");
+    const [negativePrompt, setNegativePrompt] = useState<string|null>(null);
     const [seed, setSeed] = useState<number>(0);
+    const [stickyMask, setStickyMask] = useState(false);
     const [maxCFGCoef, setMaxCFGCoef] = useState<number>(10.0);
     const [minCFGCoef, setMinCFGCoef] = useState<number>(1.0);
 
     const [doAudioToAudio, setDoAudioToAudio] = useState<boolean>(false);
 
-    const [stepsA, setStepsA] = useState<number>(20);
-    const [stepsB, setStepsB] = useState<number>(10);
-    const [stepsC, setStepsC] = useState<number>(10);
-    const [stepsD, setStepsD] = useState<number>(10);
+    const [steps, setSteps] = useState([20, 10, 10, 10])
+    const [initialMaskPct, setInitialMaskPct] = useState([0, 0, 0, 0]);
+    const [finalMaskPct, setFinalMaskPct] = useState([1, 1, 1, 1]);
 
-    const [initialTimestepA, setInitialTimestepA] = useState<number>(0);
-    const [initialTimestepB, setInitialTimestepB] = useState<number>(0);
-    const [initialTimestepC, setInitialTimestepC] = useState<number>(0);
-    const [initialTimestepD, setInitialTimestepD] = useState<number>(0);
 
     const [workingAudioBuffer, setWorkingAudioBuffer] = useState<ToneAudioBuffer>();
 
@@ -82,10 +79,7 @@ function MAGNeTMutate() {
     function generate() {
         if (prompt.trim().length > 0) {
             console.log(`sending generate with prompt '${prompt}'`)
-            const steps = [stepsA, stepsB, stepsC, stepsD];
             const initial_tokens = doAudioToAudio ? tokens : null;
-            const initial_timesteps = (doAudioToAudio ?
-                [initialTimestepA, initialTimestepB, initialTimestepC, initialTimestepD] : null);
             function callback(progressPct: number, tokens: [][]) {
 
                 if (!tokens) {
@@ -104,11 +98,13 @@ function MAGNeTMutate() {
 
             const uuid = audiocraft!.generate(
                 prompt,
+                negativePrompt,
                 seed,
                 steps,
                 callback,
                 initial_tokens,
-                initial_timesteps,
+                (doAudioToAudio ? initialMaskPct : null),
+                (doAudioToAudio ? finalMaskPct : null),
                 minCFGCoef,
                 maxCFGCoef
             )
@@ -161,38 +157,65 @@ function MAGNeTMutate() {
         <>
             <h1>MAGNeT Mutation</h1>
             <div>
-                <div><textarea placeholder={"enter prompt"} onChange={(e) => setPrompt(e.target.value)}></textarea>
+                <div>
+                    <textarea placeholder={"prompt"} onChange={(e) => setPrompt(e.target.value)}></textarea>
                 </div>
-                <div className={"seed"}>Seed:
+                <div>
+                    <textarea placeholder={"negative prompt"} onChange={
+                        (e) => setNegativePrompt(
+                            (e.target.value.length > 0) ? e.target.value : null
+                        )}></textarea>
+                </div>
+                <div className={"inline-input-number inline-input-number-80"}>Seed:
                     <InputNumber value={seed} onChange={(value) => value && setSeed(value)}/>
+                    Sticky mask:
+                    <input type={"checkbox"}
+                           style={{width: '20px'}}
+                           checked={stickyMask}
+                           onChange={(e) => setStickyMask(e.target.checked)}
+                           />
                 </div>
-                <div className={"seed"}>CFG coefficients:
+
+                <div className={"inline-input-number"}>CFG coefficients:
                     Max <InputNumber value={maxCFGCoef} onChange={(value) => value && setMaxCFGCoef(value)}/>
                     Min <InputNumber value={minCFGCoef} onChange={(value) => value && setMinCFGCoef(value)}/>
                 </div>
 
-                <div className={"steps"}>Steps:
-                    <InputNumber value={stepsA} onChange={(value) => value && setStepsA(value)}/>
-                    <InputNumber value={stepsB} onChange={(value) => value && setStepsB(value)}/>
-                    <InputNumber value={stepsC} onChange={(value) => value && setStepsC(value)}/>
-                    <InputNumber value={stepsD} onChange={(value) => value && setStepsD(value)}/>
+                <div className={"inline-input-number"}>Steps:
+                    <InputNumber value={steps[0]} onChange={(value) => value && setSteps([value, steps[1], steps[2], steps[3]])}/>
+                    <InputNumber value={steps[1]} onChange={(value) => value && setSteps([steps[0], value, steps[2], steps[3]])}/>
+                    <InputNumber value={steps[2]} onChange={(value) => value && setSteps([steps[0], steps[1], value, steps[3]])}/>
+                    <InputNumber value={steps[3]} onChange={(value) => value && setSteps([steps[0], steps[1], steps[2], value])}/>
                 </div>
                 {tokens.length > 0 && <div>
+                    Do audio-to-audio:
                     <input type={"checkbox"}
                            checked={doAudioToAudio}
+                           style={{width: '20px'}}
                            onChange={(e) => setDoAudioToAudio(e.target.checked)}/>
-                    Do Audio-To-Audio
                 </div>}
                 {tokens.length > 0 && doAudioToAudio &&
-                    <div className={"initial-timesteps"}>Initial timesteps:
-                        <input type="number" value={initialTimestepA} step={"0.01"}
-                               onChange={(e) => setInitialTimestepA(e.target.valueAsNumber)}/>
-                        <input type="number" value={initialTimestepB} step={"0.01"}
-                               onChange={(e) => setInitialTimestepB(e.target.valueAsNumber)}/>
-                        <input type="number" value={initialTimestepC} step={"0.01"}
-                               onChange={(e) => setInitialTimestepC(e.target.valueAsNumber)}/>
-                        <input type="number" value={initialTimestepD} step={"0.01"}
-                               onChange={(e) => setInitialTimestepD(e.target.valueAsNumber)}/>
+                    <div>Mask percents:
+                        <div className={"mask-pcts"}>Initial:
+                            <input type="number" value={initialMaskPct[0]} step={"0.01"}
+                                   onChange={(e) => setInitialMaskPct([e.target.valueAsNumber, initialMaskPct[1], initialMaskPct[2], initialMaskPct[3]])}/>
+                            <input type="number" value={initialMaskPct[1]} step={"0.01"}
+                                   onChange={(e) => setInitialMaskPct([initialMaskPct[0], e.target.valueAsNumber, initialMaskPct[2], initialMaskPct[3]])}/>
+                            <input type="number" value={initialMaskPct[2]} step={"0.01"}
+                                   onChange={(e) => setInitialMaskPct([initialMaskPct[0], initialMaskPct[1], e.target.valueAsNumber, initialMaskPct[3]])}/>
+                            <input type="number" value={initialMaskPct[3]} step={"0.01"}
+                                   onChange={(e) => setInitialMaskPct([initialMaskPct[0], initialMaskPct[1], initialMaskPct[2], e.target.valueAsNumber])}/>
+                        </div>
+                        <div className={"mask-pcts"}>Final:
+                            <input type="number" value={finalMaskPct[0]} step={"0.01"}
+                                   onChange={(e) => setFinalMaskPct([e.target.valueAsNumber, finalMaskPct[1], finalMaskPct[2], finalMaskPct[3]])}/>
+                            <input type="number" value={finalMaskPct[1]} step={"0.01"}
+                                   onChange={(e) => setFinalMaskPct([finalMaskPct[0], e.target.valueAsNumber, finalMaskPct[2], finalMaskPct[3]])}/>
+                            <input type="number" value={finalMaskPct[2]} step={"0.01"}
+                                   onChange={(e) => setFinalMaskPct([finalMaskPct[0], finalMaskPct[1], e.target.valueAsNumber, finalMaskPct[3]])}/>
+                            <input type="number" value={finalMaskPct[3]} step={"0.01"}
+                                   onChange={(e) => setFinalMaskPct([finalMaskPct[0], finalMaskPct[1], finalMaskPct[2], e.target.valueAsNumber])}/>
+                        </div>
                     </div>
                 }
                 {generationUuid && progress && <progress value={progress}/>}

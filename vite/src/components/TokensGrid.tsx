@@ -43,7 +43,7 @@ export function TokensGrid(props: TokensGridProps) {
     }
     const cols = data[0].length
     const perTokenWidth = width/cols;
-    console.log(`${rows} rows, with ${cols} columns, per-token width ${perTokenWidth}`)
+    //console.log(`${rows} rows, with ${cols} columns, per-token width ${perTokenWidth}`)
 
     function renderGrid(data: number[][]) {
         const gridItems = []

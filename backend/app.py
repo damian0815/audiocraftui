@@ -6,8 +6,8 @@ import torch
 from flask import Flask, request
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
-from backend.audiocraft_wrapper import AudiocraftWrapper
-from backend.generation_history import GenerationParameters
+from audiocraft_wrapper import AudiocraftWrapper
+from generation_history import GenerationParameters
 
 app = Flask(__name__)
 socketio = SocketIO(app,debug=True,cors_allowed_origins='*')

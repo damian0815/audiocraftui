@@ -13,6 +13,9 @@ RUN sed -ri 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/g' /etc/ss
 RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
 EXPOSE 22
 
+COPY ./requirements.txt /install/requirements.txt
+RUN pip install -r /install/requirements.txt
+
 WORKDIR /workspace
 # automatically invalidate the cache when the repo changes
 ADD https://api.github.com/repos/damian0815/audiocraft/git/refs/heads/token_build_progress /.git-hashref
@@ -21,12 +24,9 @@ RUN git clone https://github.com/damian0815/audiocraft && \
     git checkout token_build_progress && \
     pip install -e .
 
-WORKDIR /workspace/audiocraftui
-COPY ./requirements.txt .
-COPY app.py .
-COPY backend .
-RUN pip install -e .
+COPY backend /workspace/audiocraftui/backend
 
+WORKDIR /workspace/audiocraftui/backend
 EXPOSE 4000
 #ENTRYPOINT ["flask", "run", "--port", "4000", "--host", "0.0.0.0", "--debug"]
 ENTRYPOINT service ssh restart && flask run --port 4000 --host 0.0.0.0 --debug

@@ -2,3 +2,4 @@ git+https://github.com/damian0815/audiocraft@token_build_progress
 flask
 flask-cors
 flask-socketio
+dataclass-wizard

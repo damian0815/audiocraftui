@@ -11,6 +11,8 @@ from audiocraft.models.genmodel import BaseGenModel
 
 from audiocraft.modules.conditioners import ConditioningAttributes
 
+from backend.generation_history import GenerationParameters
+
 
 def save_wave_file(audio: torch.Tensor, samplerate: int, wave_file_name: str):
     audio = (audio.detach().cpu().numpy() * (2 ** 15 - 1)).astype("<h")
@@ -76,43 +78,30 @@ class AudiocraftWrapper:
 
 
     def generate_magnet_tokens(self,
-                               prompt: str,
                                request_uuid: str,
-                               seed: int,
-                               steps: list[int],
-                               progress_callback: Callable[[int, int, torch.Tensor], None],
-                               use_sampling: bool = True,
-                               top_k: int = 0,
-                               top_p: float = 0.9,
-                               temperature: float = 3.0,
-                               wandering_mask: bool = False,
-                               max_cfg_coef: float=10.0,
-                               min_cfg_coef: float=1.0,
-                               initial_tokens: torch.Tensor = None,
-                               initial_mask_pcts: Optional[list[float]] = None,
-                               final_mask_pcts: Optional[list[float]] = None,
-                               negative_prompt: str = None,
+                               parameters: GenerationParameters,
+                               progress_callback: Callable[[int, int, torch.Tensor|None], bool|None],
                                ) -> torch.Tensor:
         print("in generate - updated wrapper")
         with torch.no_grad():
             initialization_kwargs = {}
-            if initial_tokens is not None:
-                initialization_kwargs['initial_tokens'] = initial_tokens
-            negative_conditions = [ConditioningAttributes(text={'description': negative_prompt})] if negative_prompt else None
+            if parameters.initial_tokens is not None:
+                initialization_kwargs['initial_tokens'] = torch.Tensor(parameters.initial_tokens).long().unsqueeze(0)
+            negative_conditions = [ConditioningAttributes(text={'description': parameters.negative_prompt})] if parameters.negative_prompt else None
             self.model.set_generation_params(
-                use_sampling=use_sampling,
-                top_k=top_k,
-                top_p=top_p,
-                temperature=temperature,
-                max_cfg_coef=max_cfg_coef,
-                min_cfg_coef=min_cfg_coef,
+                use_sampling=parameters.use_sampling,
+                top_k=parameters.top_k,
+                top_p=parameters.top_p,
+                temperature=parameters.temperature,
+                max_cfg_coef=parameters.max_cfg_coef,
+                min_cfg_coef=parameters.min_cfg_coef,
                 #decoding_steps=[int(20 * self.model.lm.cfg.dataset.segment_duration // 10), 10, 10, 10],
-                decoding_steps=steps,
+                decoding_steps=parameters.steps,
                 span_arrangement='stride1',
-                wandering_mask=wandering_mask,
-                initial_mask_pcts=initial_mask_pcts or [0, 0, 0, 0],
-                final_mask_pcts=final_mask_pcts or [1, 1, 1, 1],
-                negative_conditions=negative_conditions,
+                wandering_mask=parameters.wandering_mask,
+                initial_mask_pcts=parameters.initial_mask_pcts or [0, 0, 0, 0],
+                final_mask_pcts=parameters.final_mask_pcts or [1, 1, 1, 1],
+                negative_conditions=parameters.negative_conditions,
                 **initialization_kwargs
             )
 
@@ -124,10 +113,10 @@ class AudiocraftWrapper:
             with self.lock:
                 self.model.set_custom_progress_callback(progress_callback)
                 self.model.set_should_cancel_callback(cancellation_callback)
-                if seed is not None:
-                    random.seed(seed)
-                    torch.manual_seed(seed)
-                output = self.model.generate(descriptions=[prompt],
+                if parameters.seed is not None:
+                    random.seed(parameters.seed)
+                    torch.manual_seed(parameters.seed)
+                output = self.model.generate(descriptions=[parameters.prompt],
                                              progress=True,
                                              return_tokens=True)
                 #audio_output = model.compression_model.decode(output[1], force_cpu_elu=True)

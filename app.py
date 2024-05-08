@@ -7,6 +7,7 @@ from flask import Flask, request
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 from backend.audiocraft_wrapper import AudiocraftWrapper
+from backend.generation_history import GenerationParameters
 
 app = Flask(__name__)
 socketio = SocketIO(app,debug=True,cors_allowed_origins='*')
@@ -27,6 +28,7 @@ def on_disconnect():
 def on_generate(data):
     print("generating with data", data)
     uuid = data['uuid']
+    generation_parameters = GenerationParameters.from_dict(data['parameters'])
     model_type = data['modelType']
     prompt = data['prompt']
     seed = data['seed']
@@ -40,8 +42,6 @@ def on_generate(data):
     top_k = data.get('top_k', 0)
     top_p = data.get('top_p', 0.9)
     temperature = data.get('temperature', 3.0)
-    if initial_tokens is not None:
-        initial_tokens = torch.Tensor(initial_tokens).long().unsqueeze(0)
     negative_prompt = data.get('negative_prompt', None)
     def progress_callback(i: int, count: int, tokens: torch.Tensor):
         progress_args = { "uuid": uuid,

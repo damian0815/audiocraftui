@@ -11,7 +11,7 @@ from audiocraft.models.genmodel import BaseGenModel
 
 from audiocraft.modules.conditioners import ConditioningAttributes
 
-from generation_history import GenerationParameters
+from .generation_history import GenerationParameters
 
 
 def save_wave_file(audio: torch.Tensor, samplerate: int, wave_file_name: str):
@@ -101,7 +101,7 @@ class AudiocraftWrapper:
                 wandering_mask=parameters.wandering_mask,
                 initial_mask_pcts=parameters.initial_mask_pcts or [0, 0, 0, 0],
                 final_mask_pcts=parameters.final_mask_pcts or [1, 1, 1, 1],
-                negative_conditions=parameters.negative_conditions,
+                negative_conditions=negative_conditions,
                 **initialization_kwargs
             )
 

@@ -4,14 +4,27 @@ from typing import Optional
 
 import torch
 from flask import Flask, request
-from flask_socketio import SocketIO, emit
+from flask_socketio import socketio, SocketIO, emit
 from flask_cors import CORS
-from audiocraft_wrapper import AudiocraftWrapper
-from generation_history import GenerationParameters
+from .audiocraft_wrapper import AudiocraftWrapper
+from .db import close_db, init_db_command
+from .generation_history import GenerationParameters
 
-app = Flask(__name__)
-socketio = SocketIO(app,debug=True,cors_allowed_origins='*')
-CORS(app)
+socketio = SocketIO(debug=True, cors_allowed_origins='*')
+
+def create_app():
+    app = Flask(__name__)
+    socketio.init_app(app)
+    CORS(app)
+    # existing code omitted
+
+    app.teardown_appcontext(close_db)
+    app.cli.add_command(init_db_command)
+
+    print("extensions: ", app.extensions)
+
+    return app
+
 
 default_device = os.environ.get('DEVICE', 'cpu')
 default_model_magnet = os.environ.get('MODEL_MAGNET', 'facebook/magnet-small-10secs')
@@ -137,8 +150,6 @@ def detokenize_event(data):
         'uuid': data['uuid'],
         'audioFloat32Bytes': packed_floats
     }, room=sid)
-
-print("extensions: ", app.extensions)
 
 if __name__ == '__main__':
     socketio.run(app, port=4000)

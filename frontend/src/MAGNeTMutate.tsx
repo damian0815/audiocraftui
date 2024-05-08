@@ -125,7 +125,7 @@ function MAGNeTMutate() {
                 callback,
             )
 
-            setProgress(0.0);
+            setProgress(0.000001);
             setGenerationUuid(uuid);
         }
     }

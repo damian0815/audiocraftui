@@ -28,6 +28,7 @@ pip install -r requirements.txt
 
 run:
 ```shell
+cd backend
 flask run --port 4000 --debug
 ```
 

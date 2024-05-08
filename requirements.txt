@@ -1,3 +1,4 @@
+torch==2.1
 git+https://github.com/damian0815/audiocraft@token_build_progress
 flask
 flask-cors

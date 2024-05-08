@@ -18,7 +18,7 @@ RUN pip install -r /install/requirements.txt
 
 WORKDIR /workspace
 # automatically invalidate the cache when the repo changes
-ADD https://github.com/damian0815/audiocraft/git/refs/heads/token_build_progress /.git-hashref
+ADD https://api.github.com/repos/damian0815/audiocraft/git/refs/heads/token_build_progress /.git-hashref
 RUN git clone https://github.com/damian0815/audiocraft && \
     cd audiocraft && \
     git checkout token_build_progress && \

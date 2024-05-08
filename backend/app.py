@@ -29,20 +29,7 @@ def on_generate(data):
     print("generating with data", data)
     uuid = data['uuid']
     generation_parameters = GenerationParameters.from_dict(data['parameters'])
-    model_type = data['modelType']
-    prompt = data['prompt']
-    seed = data['seed']
-    steps = data['steps']
-    max_cfg_coef = data.get('max_cfg_coef', 10.0)
-    min_cfg_coef = data.get('min_cfg_coef', 1.0)
-    initial_msk_pcts = data.get('initial_mask_pcts', None)
-    final_msk_pcts = data.get('final_mask_pcts', None)
-    initial_tokens = data.get('initial_tokens', None)
-    use_sampling = data.get('use_sampling', True)
-    top_k = data.get('top_k', 0)
-    top_p = data.get('top_p', 0.9)
-    temperature = data.get('temperature', 3.0)
-    negative_prompt = data.get('negative_prompt', None)
+    model_type = data['model_type']
     def progress_callback(i: int, count: int, tokens: torch.Tensor):
         progress_args = { "uuid": uuid,
                           "i": i,
@@ -53,21 +40,9 @@ def on_generate(data):
         #print("generate progress:", progress_args)
         emit("generateProgress", progress_args)
     get_audiocraft_wrapper(model_type).generate_magnet_tokens(
-        prompt,
-        negative_prompt=negative_prompt,
         request_uuid=uuid,
-        seed=seed,
-        steps=steps,
         progress_callback=progress_callback,
-        use_sampling=use_sampling,
-        top_k=top_k,
-        top_p=top_p,
-        temperature=temperature,
-        max_cfg_coef=max_cfg_coef,
-        min_cfg_coef=min_cfg_coef,
-        initial_mask_pcts=initial_msk_pcts,
-        final_mask_pcts=final_msk_pcts,
-        initial_tokens=initial_tokens
+        parameters=generation_parameters
     )
 
 @socketio.on("cancelGeneration")

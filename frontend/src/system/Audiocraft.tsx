@@ -154,21 +154,23 @@ export class Audiocraft {
         this.requestCallbackStorage.set(requestUuid, callback)
         console.log("generate request with prompt", options.prompt, "uuid", requestUuid)
         this.socket.emit('generate', {
-            "modelType": this.modelType,
-            "seed": options.seed,
-            "steps": options.steps,
+            "model_type": this.modelType,
             "uuid": requestUuid,
-            "prompt": options.prompt,
-            "negative_prompt": options.negativePrompt,
-            "min_cfg_coef": options.minCFGCoef,
-            "max_cfg_coef": options.maxCFGCoef,
-            "initial_mask_pcts": options.initialMaskPct,
-            "final_mask_pcts": options.finalMaskPct,
-            "initial_tokens": options.initialTokens,
-            "temperature": options.temperature,
-            "use_sampling": options.useSampling,
-            "top_p": options.topP,
-            "top_k": options.topK,
+            "parameters": {
+                "seed": options.seed,
+                "steps": options.steps,
+                "prompt": options.prompt,
+                "negative_prompt": options.negativePrompt,
+                "min_cfg_coef": options.minCFGCoef,
+                "max_cfg_coef": options.maxCFGCoef,
+                "initial_mask_pcts": options.initialMaskPct,
+                "final_mask_pcts": options.finalMaskPct,
+                "initial_tokens": options.initialTokens,
+                "temperature": options.temperature,
+                "use_sampling": options.useSampling,
+                "top_p": options.topP,
+                "top_k": options.topK,
+            }
         })
         return requestUuid
     }

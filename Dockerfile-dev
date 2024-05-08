@@ -22,7 +22,7 @@ ADD https://api.github.com/repos/damian0815/audiocraft/git/refs/heads/token_buil
 RUN git clone https://github.com/damian0815/audiocraft && \
     cd audiocraft && \
     git checkout token_build_progress && \
-    pip install -e . \
+    pip install -e .
 
 WORKDIR /workspace/audiocraftui
 COPY app.py .

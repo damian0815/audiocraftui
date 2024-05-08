@@ -1,0 +1,1 @@
+docker build --tag audiocraftui:latest -f Dockerfile-dev . && docker run -v c:\Users\damian\code\hf_home:/workspace/hf_home --gpus all --rm -e HF_HOME=/workspace/hf_home -e DEVICE=cuda -p 4000:4000 -p 12322:22 -i -t audiocraftui:latest

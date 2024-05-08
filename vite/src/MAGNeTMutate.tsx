@@ -5,7 +5,7 @@ import {useEffect, useState} from "react";
 import {TokensGrid} from "./components/TokensGrid.tsx";
 
 import {cloneArray} from './system/cloneArray.tsx';
-import {Audiocraft, interpolateTokens} from './system/Audiocraft.tsx';
+import {Audiocraft, GenerationOptions, interpolateTokens} from './system/Audiocraft.tsx';
 import {WavesurferPanel} from "./components/WavesurferPanel.tsx";
 import {ToneAudioBuffer} from "tone";
 import InputNumber from "rc-input-number";
@@ -27,14 +27,18 @@ function MAGNeTMutate() {
 
     const [prompt, setPrompt] = useState<string>("");
     const [negativePrompt, setNegativePrompt] = useState<string|null>(null);
+    const [steps, setSteps] = useState([20, 10, 10, 10])
     const [seed, setSeed] = useState<number>(0);
-    const [stickyMask, setStickyMask] = useState(false);
+    const [useSampling, setUseSampling] = useState<boolean>(true);
+    const [temperature, setTemperature] = useState<number>(3);
+    const [topP, setTopP] = useState<number>(0.9);
+    const [topK, setTopK] = useState<number>(0);
+    const [wanderingMask, setWanderingMask] = useState(true);
     const [maxCFGCoef, setMaxCFGCoef] = useState<number>(10.0);
     const [minCFGCoef, setMinCFGCoef] = useState<number>(1.0);
 
     const [doAudioToAudio, setDoAudioToAudio] = useState<boolean>(false);
 
-    const [steps, setSteps] = useState([20, 10, 10, 10])
     const [initialMaskPct, setInitialMaskPct] = useState([0, 0, 0, 0]);
     const [finalMaskPct, setFinalMaskPct] = useState([1, 1, 1, 1]);
 
@@ -76,10 +80,28 @@ function MAGNeTMutate() {
         };
       }, []);
 
+    function buildGenerationOptions(): GenerationOptions {
+        const options = new GenerationOptions()
+        options.prompt = prompt
+        options.negativePrompt = negativePrompt
+        options.seed = seed
+        options.steps = steps
+        options.initialTokens = (doAudioToAudio ? tokens : null)
+        options.initialMaskPct = (doAudioToAudio ? initialMaskPct : null)
+        options.finalMaskPct = (doAudioToAudio ? finalMaskPct : null)
+        options.temperature = temperature
+        options.useSampling = useSampling
+        options.topP = topP
+        options.topK = topK
+        options.maxCFGCoef = maxCFGCoef
+        options.minCFGCoef = minCFGCoef
+        return options
+    }
+
     function generate() {
         if (prompt.trim().length > 0) {
             console.log(`sending generate with prompt '${prompt}'`)
-            const initial_tokens = doAudioToAudio ? tokens : null;
+
             function callback(progressPct: number, tokens: [][]) {
 
                 if (!tokens) {
@@ -96,17 +118,11 @@ function MAGNeTMutate() {
                 }
             }
 
+            const generationOptions = buildGenerationOptions()
+
             const uuid = audiocraft!.generate(
-                prompt,
-                negativePrompt,
-                seed,
-                steps,
+                generationOptions,
                 callback,
-                initial_tokens,
-                (doAudioToAudio ? initialMaskPct : null),
-                (doAudioToAudio ? finalMaskPct : null),
-                minCFGCoef,
-                maxCFGCoef
             )
 
             setProgress(0.0);
@@ -167,61 +183,79 @@ function MAGNeTMutate() {
                         )}></textarea>
                 </div>
                 <div className={"inline-input-number inline-input-number-80"}>Seed:
-                    <InputNumber value={seed} onChange={(value) => value && setSeed(value)}/>
-                    Sticky mask:
+                    <InputNumber value={seed} onChange={(value: number) => value && setSeed(value)}/>
+                    Wandering mask:
                     <input type={"checkbox"}
                            style={{width: '20px'}}
-                           checked={stickyMask}
-                           onChange={(e) => setStickyMask(e.target.checked)}
-                           />
+                           checked={wanderingMask}
+                           onChange={(e) => setWanderingMask(e.target.checked)}
+                    />
                 </div>
-
-                <div className={"inline-input-number"}>CFG coefficients:
-                    Max <InputNumber value={maxCFGCoef} onChange={(value) => value && setMaxCFGCoef(value)}/>
-                    Min <InputNumber value={minCFGCoef} onChange={(value) => value && setMinCFGCoef(value)}/>
-                </div>
-
-                <div className={"inline-input-number"}>Steps:
-                    <InputNumber value={steps[0]} onChange={(value) => value && setSteps([value, steps[1], steps[2], steps[3]])}/>
-                    <InputNumber value={steps[1]} onChange={(value) => value && setSteps([steps[0], value, steps[2], steps[3]])}/>
-                    <InputNumber value={steps[2]} onChange={(value) => value && setSteps([steps[0], steps[1], value, steps[3]])}/>
-                    <InputNumber value={steps[3]} onChange={(value) => value && setSteps([steps[0], steps[1], steps[2], value])}/>
-                </div>
-                {tokens.length > 0 && <div>
-                    Do audio-to-audio:
+                <div className={"inline-input-number"}>
+                    Use sampling:
                     <input type={"checkbox"}
-                           checked={doAudioToAudio}
-                           style={{width: '20px'}}
-                           onChange={(e) => setDoAudioToAudio(e.target.checked)}/>
-                </div>}
-                {tokens.length > 0 && doAudioToAudio &&
-                    <div>Mask percents:
-                        <div className={"mask-pcts"}>Initial:
-                            <input type="number" value={initialMaskPct[0]} step={"0.01"}
-                                   onChange={(e) => setInitialMaskPct([e.target.valueAsNumber, initialMaskPct[1], initialMaskPct[2], initialMaskPct[3]])}/>
-                            <input type="number" value={initialMaskPct[1]} step={"0.01"}
-                                   onChange={(e) => setInitialMaskPct([initialMaskPct[0], e.target.valueAsNumber, initialMaskPct[2], initialMaskPct[3]])}/>
-                            <input type="number" value={initialMaskPct[2]} step={"0.01"}
-                                   onChange={(e) => setInitialMaskPct([initialMaskPct[0], initialMaskPct[1], e.target.valueAsNumber, initialMaskPct[3]])}/>
-                            <input type="number" value={initialMaskPct[3]} step={"0.01"}
-                                   onChange={(e) => setInitialMaskPct([initialMaskPct[0], initialMaskPct[1], initialMaskPct[2], e.target.valueAsNumber])}/>
-                        </div>
-                        <div className={"mask-pcts"}>Final:
-                            <input type="number" value={finalMaskPct[0]} step={"0.01"}
-                                   onChange={(e) => setFinalMaskPct([e.target.valueAsNumber, finalMaskPct[1], finalMaskPct[2], finalMaskPct[3]])}/>
-                            <input type="number" value={finalMaskPct[1]} step={"0.01"}
-                                   onChange={(e) => setFinalMaskPct([finalMaskPct[0], e.target.valueAsNumber, finalMaskPct[2], finalMaskPct[3]])}/>
-                            <input type="number" value={finalMaskPct[2]} step={"0.01"}
-                                   onChange={(e) => setFinalMaskPct([finalMaskPct[0], finalMaskPct[1], e.target.valueAsNumber, finalMaskPct[3]])}/>
-                            <input type="number" value={finalMaskPct[3]} step={"0.01"}
-                                   onChange={(e) => setFinalMaskPct([finalMaskPct[0], finalMaskPct[1], finalMaskPct[2], e.target.valueAsNumber])}/>
-                        </div>
-                    </div>
-                }
-                {generationUuid && progress && <progress value={progress}/>}
-                {generationUuid && <button onClick={cancelGeneration}>Cancel</button>}
-                {!generationUuid && <button onClick={generate}>Generate</button>}
+                                         style={{width: '20px'}}
+                                         checked={useSampling}
+                                         onChange={(e) => setUseSampling(e.target.checked)}
+                    />
+                    { useSampling && <div className={"inline-input-number"}>
+                        Temperature: <InputNumber value={temperature} step={"0.1"} onChange={(value) => value && setTemperature(value)}/>
+                        Top P: <InputNumber value={topP} step={"0.1"} onChange={(value) => value && setTopP(value)}/>
+                        Top K: <InputNumber value={topK} onChange={(value) => value && setTopK(value)}/>
+                    </div> }
+                </div>
             </div>
+
+            <div className={"inline-input-number"}>CFG coefficients:
+                Max <InputNumber value={maxCFGCoef} step={"0.1"} onChange={(value) => value && setMaxCFGCoef(value)}/>
+                Min <InputNumber value={minCFGCoef} step={"0.1"} onChange={(value) => value && setMinCFGCoef(value)}/>
+            </div>
+
+            <div className={"inline-input-number"}>Steps:
+                <InputNumber value={steps[0]}
+                             onChange={(value) => value && setSteps([value, steps[1], steps[2], steps[3]])}/>
+                <InputNumber value={steps[1]}
+                             onChange={(value) => value && setSteps([steps[0], value, steps[2], steps[3]])}/>
+                <InputNumber value={steps[2]}
+                             onChange={(value) => value && setSteps([steps[0], steps[1], value, steps[3]])}/>
+                <InputNumber value={steps[3]}
+                             onChange={(value) => value && setSteps([steps[0], steps[1], steps[2], value])}/>
+            </div>
+            { tokens.length > 0 && <div>
+                Do audio-to-audio:
+                <input type={"checkbox"}
+                       checked={doAudioToAudio}
+                       style={{width: '20px'}}
+                       onChange={(e) => setDoAudioToAudio(e.target.checked)}/>
+            </div> }
+            {tokens.length > 0 && doAudioToAudio &&
+                <div>Mask percents:
+                    <div className={"mask-pcts"}>Initial:
+                        <input type="number" value={initialMaskPct[0]} step={"0.01"}
+                               onChange={(e) => setInitialMaskPct([e.target.valueAsNumber, initialMaskPct[1], initialMaskPct[2], initialMaskPct[3]])}/>
+                        <input type="number" value={initialMaskPct[1]} step={"0.01"}
+                               onChange={(e) => setInitialMaskPct([initialMaskPct[0], e.target.valueAsNumber, initialMaskPct[2], initialMaskPct[3]])}/>
+                        <input type="number" value={initialMaskPct[2]} step={"0.01"}
+                               onChange={(e) => setInitialMaskPct([initialMaskPct[0], initialMaskPct[1], e.target.valueAsNumber, initialMaskPct[3]])}/>
+                        <input type="number" value={initialMaskPct[3]} step={"0.01"}
+                               onChange={(e) => setInitialMaskPct([initialMaskPct[0], initialMaskPct[1], initialMaskPct[2], e.target.valueAsNumber])}/>
+                    </div>
+                    <div className={"mask-pcts"}>Final:
+                        <input type="number" value={finalMaskPct[0]} step={"0.01"}
+                               onChange={(e) => setFinalMaskPct([e.target.valueAsNumber, finalMaskPct[1], finalMaskPct[2], finalMaskPct[3]])}/>
+                        <input type="number" value={finalMaskPct[1]} step={"0.01"}
+                               onChange={(e) => setFinalMaskPct([finalMaskPct[0], e.target.valueAsNumber, finalMaskPct[2], finalMaskPct[3]])}/>
+                        <input type="number" value={finalMaskPct[2]} step={"0.01"}
+                               onChange={(e) => setFinalMaskPct([finalMaskPct[0], finalMaskPct[1], e.target.valueAsNumber, finalMaskPct[3]])}/>
+                        <input type="number" value={finalMaskPct[3]} step={"0.01"}
+                               onChange={(e) => setFinalMaskPct([finalMaskPct[0], finalMaskPct[1], finalMaskPct[2], e.target.valueAsNumber])}/>
+                    </div>
+                </div>
+            }
+            {generationUuid && progress && <progress value={progress}/>}
+            {generationUuid && <button onClick={cancelGeneration}>Cancel</button>}
+            {!generationUuid && <button onClick={generate}>Generate</button>}
+
             <button onClick={() => setCachedTokens(tokens)}>Save</button>
             {cachedTokens && <button onClick={() => setTokens(cachedTokens)}>Restore</button>}
             {tokens && cachedTokens && <button onClick={() => doInterpolate()}>Interpolate current to saved</button>}

@@ -38,6 +38,10 @@ def on_generate(data):
     initial_msk_pcts = data.get('initial_mask_pcts', None)
     final_msk_pcts = data.get('final_mask_pcts', None)
     initial_tokens = data.get('initial_tokens', None)
+    use_sampling = data.get('use_sampling', True)
+    top_k = data.get('top_k', 0)
+    top_p = data.get('top_p', 0.9)
+    temperature = data.get('temperature', 3.0)
     if initial_tokens is not None:
         initial_tokens = torch.Tensor(initial_tokens).long().unsqueeze(0)
     negative_prompt = data.get('negative_prompt', None)
@@ -57,6 +61,10 @@ def on_generate(data):
         seed=seed,
         steps=steps,
         progress_callback=progress_callback,
+        use_sampling=use_sampling,
+        top_k=top_k,
+        top_p=top_p,
+        temperature=temperature,
         max_cfg_coef=max_cfg_coef,
         min_cfg_coef=min_cfg_coef,
         initial_mask_pcts=initial_msk_pcts,

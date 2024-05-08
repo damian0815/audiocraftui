@@ -42,9 +42,25 @@ export function interpolateTokens(a: number[][], b: number[][], alpha: number): 
     return result;
 }
 
+export class GenerationOptions {
+    prompt: string = ""
+    negativePrompt: string = ""
+    seed: number = -1
+    steps: number[] = [20, 10, 10, 10]
+    useSampling: boolean = true
+    topP: number = 0.9
+    topK: number = 0
+    temperature: number = 3
+    initialTokens: number[][] | null = null
+    initialMaskPct: number[] | null = null
+    finalMaskPct: number[] | null = null
+    minCFGCoef: number = 1
+    maxCFGCoef: number = 10
+}
+
 export class Audiocraft {
 
-    private static instance: Audiocraft = null;
+    private static instance: Audiocraft|null = null;
     public static getInstance(socket, modelType) {
         if (Audiocraft.instance) {
             if (Audiocraft.instance.modelType != modelType) {
@@ -131,32 +147,28 @@ export class Audiocraft {
         }
     }
 
-    generate(prompt: string,
-             negativePrompt: string|null,
-             seed: number,
-             steps: number[],
+    generate(options: GenerationOptions,
              callback: (progressPct: number, tokens: [][], masks: [][]) => void,
-             initialTokens: number[][]|null = null,
-             initialMaskPct: number[]|null = null,
-             finalMaskPct: number[]|null = null,
-             minCFGCoef: number=1,
-             maxCFGCoef: number=10,
         ): string {
         const requestUuid = uuid()
         this.requestCallbackStorage.set(requestUuid, callback)
-        console.log("generate request with prompt", prompt, "uuid", requestUuid)
+        console.log("generate request with prompt", options.prompt, "uuid", requestUuid)
         this.socket.emit('generate', {
             "modelType": this.modelType,
-            "seed": seed,
-            "steps": steps,
+            "seed": options.seed,
+            "steps": options.steps,
             "uuid": requestUuid,
-            "prompt": prompt,
-            "min_cfg_coef": minCFGCoef,
-            "max_cfg_coef": maxCFGCoef,
-            "initial_mask_pcts": initialMaskPct,
-            "final_mask_pcts": finalMaskPct,
-            "initial_tokens": initialTokens,
-            "negative_prompt": negativePrompt,
+            "prompt": options.prompt,
+            "negative_prompt": options.negativePrompt,
+            "min_cfg_coef": options.minCFGCoef,
+            "max_cfg_coef": options.maxCFGCoef,
+            "initial_mask_pcts": options.initialMaskPct,
+            "final_mask_pcts": options.finalMaskPct,
+            "initial_tokens": options.initialTokens,
+            "temperature": options.temperature,
+            "use_sampling": options.useSampling,
+            "top_p": options.topP,
+            "top_k": options.topK,
         })
         return requestUuid
     }

@@ -1,7 +1,38 @@
+import datetime
+import json
 import sqlite3
 
 import click
 from flask import current_app, g
+
+from .generation_history import GenerationParameters
+
+def save_generation(uuid: str, parameters: GenerationParameters, tokens: list[list[float]]):
+    """
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid VARCHAR(36) NOT NULL,
+    generation_params_json TEXT NOT NULL,
+    tokens_json TEXT NOT NULL
+    """
+
+    #for
+
+    parameters_json = parameters.to_json()
+    tokens_json = json.dumps(tokens)
+    get_db().execute(
+        "INSERT INTO generation (uuid, generation_params_json, tokens_json, timestamp) VALUES (?, ?, ?, ?)",
+        (uuid, parameters_json, tokens_json, datetime.datetime.now()),
+    )
+    get_db().commit()
+
+def get_generations(limit: int) -> dict[str, (datetime, GenerationParameters)]:
+    cursor = get_db().execute(
+        "SELECT uuid, timestamp, generation_params_json FROM generation LIMIT ?",
+        (limit,)
+    )
+    results = { row[0]: (row[1], row[2]) for row in cursor.fetchall() }
+    return results
+
 
 def get_db():
     if 'db' not in g:

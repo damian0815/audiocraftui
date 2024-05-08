@@ -7,13 +7,25 @@ from flask import Flask, request
 from flask_socketio import socketio, SocketIO, emit
 from flask_cors import CORS
 from .audiocraft_wrapper import AudiocraftWrapper
-from .db import close_db, init_db_command
+from .db import close_db, init_db_command, save_generation, get_generations
 from .generation_history import GenerationParameters
+import appdirs
 
 socketio = SocketIO(debug=True, cors_allowed_origins='*')
 
 def create_app():
-    app = Flask(__name__)
+
+    appname = "AudiocraftUI"
+    appauthor = "damian0815"
+
+    app = Flask(appname)
+
+    user_data_dir = appdirs.user_data_dir(appname, appauthor)
+    # idk where this should go
+    os.makedirs(user_data_dir, exist_ok=True)
+    app.config.from_mapping(
+        DATABASE=os.path.join(user_data_dir, 'audiocraftui.sqlite'),
+    )
     socketio.init_app(app)
     CORS(app)
     # existing code omitted
@@ -52,11 +64,15 @@ def on_generate(data):
                         }
         #print("generate progress:", progress_args)
         emit("generateProgress", progress_args)
-    get_audiocraft_wrapper(model_type).generate_magnet_tokens(
+    tokens = get_audiocraft_wrapper(model_type).generate_magnet_tokens(
         request_uuid=uuid,
         progress_callback=progress_callback,
         parameters=generation_parameters
     )
+    save_generation(uuid, generation_parameters, tokens.detach().cpu().tolist())
+    print("saved")
+    print(get_generations(limit=5))
+
 
 @socketio.on("cancelGeneration")
 def on_cancel_generation(data):

@@ -4,3 +4,4 @@ flask
 flask-cors
 flask-socketio
 dataclass-wizard
+appdirs

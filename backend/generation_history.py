@@ -2,11 +2,13 @@ from typing import Optional
 
 import torch
 from dataclasses import dataclass, field
-from dataclass_wizard import JSONSerializable
+from dataclass_wizard import JSONWizard
+
 
 @dataclass
-class GenerationParameters(JSONSerializable):
+class GenerationParameters(JSONWizard):
     prompt: str
+    negative_prompt: str = None
     seed: int = -1 # randomize seed
     steps: list[int] = field(default_factory=lambda: [20, 10, 10, 10])
     use_sampling: bool = True
@@ -19,7 +21,6 @@ class GenerationParameters(JSONSerializable):
     initial_tokens: Optional[list[list[float]]] = None
     initial_mask_pcts: Optional[list[float]] = None
     final_mask_pcts: Optional[list[float]] = None
-    negative_prompt: str = None
 
 
 

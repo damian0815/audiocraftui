@@ -4,7 +4,6 @@ import {ConnectionManager} from "./components/ConnectionManager.tsx";
 import {useEffect, useState} from "react";
 import {TokensGrid} from "./components/TokensGrid.tsx";
 
-import {cloneArray} from './system/cloneArray.tsx';
 import {Audiocraft, GenerationOptions, interpolateTokens} from './system/Audiocraft.tsx';
 import {WavesurferPanel} from "./components/WavesurferPanel.tsx";
 import {ToneAudioBuffer} from "tone";
@@ -17,10 +16,8 @@ function MAGNeTMutate() {
     const audiocraft = Audiocraft.getInstance(socket, 'magnet')
 
     const [isConnected, setIsConnected] = useState(socket.connected);
-    const [tokens, setTokens] = useState<[][]>([]);
-    const [cachedTokens, setCachedTokens] = useState<[][]|undefined>();
-
-    const [masks, setMasks] = useState<[][]>([]);
+    const [tokens, setTokens] = useState<number[][]>([]);
+    const [cachedTokens, setCachedTokens] = useState<number[][]|undefined>();
 
     const [generationUuid, setGenerationUuid] = useState<string|undefined>()
     const [progress, setProgress] = useState<number|undefined>()
@@ -64,7 +61,7 @@ function MAGNeTMutate() {
         }
 
         /*function onFooResponseEvent(value: any) {
-            console.log("onFooResponsEvent", value)
+            console.log("onFooResponseEvent", value)
           //setFooEvents(previous => [...previous, value]);
         }*/
 
@@ -111,7 +108,6 @@ function MAGNeTMutate() {
                 setProgress(progressPct);
                 //console.log("generate progress tokens:", tokens);
                 setTokens(tokens);
-                setMasks(masks);
 
                 if (progressPct == 1) {
                     setGenerationUuid(undefined)
@@ -146,10 +142,10 @@ function MAGNeTMutate() {
 
     async function doInterpolate() {
         const totalTokenLength = tokens[0].length;
-        const newTokens: number[][] = new Array();
+        const newTokens: number[][] = [];
         const numSteps = 10;
         const tokenSpanWidth = totalTokenLength / numSteps;
-        for (var i=0; i<numSteps; i++) {
+        for (let i=0; i<numSteps; i++) {
             console.log("interpolation step", i)
             const alpha = (i/(numSteps-1));
             const firstIndex = i * tokenSpanWidth;
@@ -159,9 +155,9 @@ function MAGNeTMutate() {
             console.log('doing interpolation...')
             const interpolatedSlice = interpolateTokens(tokensSlice, cachedTokensSlice, alpha)
             console.log('writing to newTokens...')
-            for (var j=0; j<tokens.length; j++) {
+            for (let j=0; j<tokens.length; j++) {
                 if (i==0) {
-                    newTokens.push(new Array())
+                    newTokens.push([])
                 }
                 newTokens[j].push(...interpolatedSlice[j])
             }
@@ -183,7 +179,7 @@ function MAGNeTMutate() {
                         )}></textarea>
                 </div>
                 <div className={"inline-input-number inline-input-number-80"}>Seed:
-                    <InputNumber value={seed} onChange={(value: number) => value && setSeed(value)}/>
+                    <InputNumber value={seed} onChange={(value) => value && setSeed(value)}/>
                     Wandering mask:
                     <input type={"checkbox"}
                            style={{width: '20px'}}

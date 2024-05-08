@@ -1,8 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import {socket as Socket} from "./socket.ts";
 import {ToneAudioBuffer} from "tone";
-import { cloneArray } from './cloneArray.tsx';
-
 
 function platformIsLittleEndian() {
     var arrayBuffer = new ArrayBuffer(2);
@@ -15,24 +13,8 @@ function platformIsLittleEndian() {
     else throw new Error("Something crazy just happened");
 }
 
-function swapBytes32InPlace(buf: any) {
-    var bytes = new Uint8Array(buf);
-    var len = bytes.length;
-    var holder;
-
-    // 32 bit
-    for (var i = 0; i<len; i+=4) {
-        holder = bytes[i];
-        bytes[i] = bytes[i+3];
-        bytes[i+3] = holder;
-        holder = bytes[i+1];
-        bytes[i+1] = bytes[i+2];
-        bytes[i+2] = holder;
-    }
-}
-
 export function interpolateTokens(a: number[][], b: number[][], alpha: number): number[][] {
-    const result = new Array();
+    const result = [];
     //console.assert(a.length == b.length);
     for (var i=0; i<a.length; i++) {
         console.log("stage", i)
@@ -44,7 +26,7 @@ export function interpolateTokens(a: number[][], b: number[][], alpha: number): 
 
 export class GenerationOptions {
     prompt: string = ""
-    negativePrompt: string = ""
+    negativePrompt: string | null = null
     seed: number = -1
     steps: number[] = [20, 10, 10, 10]
     useSampling: boolean = true

@@ -2,13 +2,11 @@ import os
 import struct
 from typing import Optional
 
-import msgpack
 import torch
-from audiocraft.modules.conditioners import ConditioningAttributes
-from flask import Flask,render_template,request
+from flask import Flask, request
 from flask_socketio import SocketIO, emit
-from flask_cors import CORS, cross_origin
-from audiocraft_wrapper import AudiocraftWrapper, save_wave_file
+from flask_cors import CORS
+from backend.audiocraft_wrapper import AudiocraftWrapper
 
 app = Flask(__name__)
 socketio = SocketIO(app,debug=True,cors_allowed_origins='*')
@@ -156,7 +154,7 @@ def detokenize_event(data):
           "audio tensor with shape", audio.shape,
           ":", audio)
 
-    save_wave_file(audio, sample_rate, "/tmp/detokenized_audio.wav")
+    #save_wave_file(audio, sample_rate, "/tmp/detokenized_audio.wav")
     packed_floats = pack_32bit_float_array(audio[0][0].tolist(), to_little_endian=data['audioIsLittleEndian'])
     #print("packed to", packed_floats)
     sid = request.sid

@@ -35,15 +35,15 @@ flask run --port 4000 --debug
 
 Install js stuff (assumes you already have node installed, if not use nvm or similar to install node.js 18+):
 ```shell
-cd vite
-npm install
 npm install -g vite
+cd frontend
+npm install
 ```
 
 Launch:
 
 ```shell
-cd vite
+cd frontend
 vite dev
 ```
 

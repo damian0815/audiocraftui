@@ -8,7 +8,7 @@ RUN pip install -r /install/requirements.txt
 
 WORKDIR /workspace/audiocraftui
 COPY app.py .
-COPY audiocraft_wrapper.py .
+COPY backend .
 
 EXPOSE 4000
 ENTRYPOINT ["flask", "run", "--port", "4000", "--host", "0.0.0.0"]

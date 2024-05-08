@@ -11,7 +11,7 @@ from audiocraft.models.genmodel import BaseGenModel
 
 from audiocraft.modules.conditioners import ConditioningAttributes
 
-from backend.generation_history import GenerationParameters
+from generation_history import GenerationParameters
 
 
 def save_wave_file(audio: torch.Tensor, samplerate: int, wave_file_name: str):

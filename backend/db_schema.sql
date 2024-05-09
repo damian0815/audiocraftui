@@ -8,4 +8,3 @@ CREATE TABLE generation (
     tokens_json TEXT NOT NULL,
     timestamp DATETIME NOT NULL
 );
-

@@ -26,10 +26,16 @@ def save_generation(uuid: str, parameters: GenerationParameters, tokens: list[li
     )
     get_db().commit()
 
-def get_generations(limit: int=20, offset: int=0) -> list[dict]:
+def get_generations(limit: int=20, cursor_timestamp: datetime=None, cursor_uuid: str=None) -> list[dict]:
+    params = (limit,)
+    sql = "SELECT uuid, timestamp, generation_params_json, tokens_json FROM generation "
+    if cursor_timestamp is not None:
+        sql += "WHERE (timestamp, uuid) > (? , ?) "
+        params = (cursor_timestamp, cursor_uuid) + params
+    sql += "ORDER BY (timestamp, uuid) DESC LIMIT ?"
     cursor = get_db().execute(
-        "SELECT uuid, timestamp, generation_params_json, tokens_json FROM generation ORDER BY timestamp DESC LIMIT ? OFFSET ?",
-        (limit, offset)
+        sql,
+        params
     )
     results = [ {
             "uuid": row[0],

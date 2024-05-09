@@ -10,6 +10,7 @@ import {ToneAudioBuffer} from "tone";
 import InputNumber from "rc-input-number";
 
 import "./MAGNeTMutate.css"
+import {GenerationHistory} from "./components/GenerationHistory.tsx";
 
 function MAGNeTMutate() {
 
@@ -165,18 +166,48 @@ function MAGNeTMutate() {
         setTokens(newTokens)
     }
 
+    function useAll(options: GenerationOptions) {
+        console.log("setting options:", options)
+        setPrompt(options.prompt)
+        setNegativePrompt(options.negativePrompt)
+        setSeed(options.seed)
+        setSteps(options.steps)
+        setTemperature(options.temperature)
+        if (options.initialTokens) {
+            setDoAudioToAudio(true)
+            setTokens(options.initialTokens)
+            setInitialMaskPct(options.initialMaskPct!)
+            setFinalMaskPct(options.finalMaskPct!)
+        } else {
+            setDoAudioToAudio(false)
+        }
+        if (options.useSampling) {
+            setUseSampling(true)
+            setTemperature(options.temperature)
+            setTopK(options.topK)
+            setTopP(options.topP)
+        } else {
+            setUseSampling(false)
+        }
+        setMaxCFGCoef(options.maxCFGCoef)
+        setMinCFGCoef(options.minCFGCoef)
+    }
+
     return (
         <>
             <h1>MAGNeT Mutation</h1>
             <div>
                 <div>
-                    <textarea placeholder={"prompt"} onChange={(e) => setPrompt(e.target.value)}></textarea>
+                    <textarea value={prompt} placeholder={"prompt"} onChange={
+                        (e) => setPrompt(
+                            e.target.value
+                        )}>{prompt}</textarea>
                 </div>
                 <div>
-                    <textarea placeholder={"negative prompt"} onChange={
+                    <textarea value={negativePrompt} placeholder={"negative prompt"} onChange={
                         (e) => setNegativePrompt(
                             (e.target.value.length > 0) ? e.target.value : null
-                        )}></textarea>
+                        )}>{negativePrompt}</textarea>
                 </div>
                 <div className={"inline-input-number inline-input-number-80"}>Seed:
                     <InputNumber value={seed} onChange={(value) => value && setSeed(value)}/>
@@ -263,6 +294,8 @@ function MAGNeTMutate() {
                 <ConnectionManager/>
                 <div>is connected: {isConnected ? "1" : "0"}</div>
             </div>
+
+            <GenerationHistory useAll={useAll}/>
         </>
     )
 

@@ -3,7 +3,7 @@ import struct
 from typing import Optional
 
 import torch
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_socketio import socketio, SocketIO, emit
 from flask_cors import CORS
 from .audiocraft_wrapper import AudiocraftWrapper
@@ -28,7 +28,9 @@ def create_app():
     )
     socketio.init_app(app)
     CORS(app)
-    # existing code omitted
+
+    from .routes import route_blueprint
+    app.register_blueprint(route_blueprint)
 
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
@@ -116,7 +118,6 @@ def pack_32bit_float_array(floats, to_little_endian):
     format_string = f"{'<' if to_little_endian else '>'}{count}f"
     print("packing with format string: ", format_string)
     return struct.pack(format_string, *floats)
-
 
 @socketio.on("tokenize")
 def tokenize_event(data):

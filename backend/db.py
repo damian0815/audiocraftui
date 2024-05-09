@@ -1,6 +1,7 @@
 import datetime
 import json
 import sqlite3
+import uuid
 
 import click
 from flask import current_app, g
@@ -25,12 +26,17 @@ def save_generation(uuid: str, parameters: GenerationParameters, tokens: list[li
     )
     get_db().commit()
 
-def get_generations(limit: int) -> dict[str, (datetime, GenerationParameters)]:
+def get_generations(limit: int=20, offset: int=0) -> list[dict]:
     cursor = get_db().execute(
-        "SELECT uuid, timestamp, generation_params_json FROM generation LIMIT ?",
-        (limit,)
+        "SELECT uuid, timestamp, generation_params_json, tokens_json FROM generation ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+        (limit, offset)
     )
-    results = { row[0]: (row[1], row[2]) for row in cursor.fetchall() }
+    results = [ {
+            "uuid": row[0],
+            "timestamp": row[1],
+            "generation_params": GenerationParameters.from_json(row[2]),
+            "tokens": json.loads(row[3])
+        } for row in cursor.fetchall() ]
     return results
 
 

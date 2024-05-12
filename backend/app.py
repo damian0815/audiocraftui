@@ -15,6 +15,8 @@ socketio = SocketIO(debug=True, cors_allowed_origins='*')
 
 def create_app():
 
+    print("hello")
+
     appname = "AudiocraftUI"
     appauthor = "damian0815"
 

@@ -38,6 +38,8 @@ export class GenerationOptions {
     finalMaskPct: number[] | null = null
     minCFGCoef: number = 1
     maxCFGCoef: number = 10
+    maskingStrategy: string = "default";
+    maskingOptions: any;
 }
 
 export class Audiocraft {

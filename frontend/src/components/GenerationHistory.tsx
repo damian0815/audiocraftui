@@ -1,7 +1,10 @@
 import InfiniteScroll from 'react-infinite-scroll-component';
-import {useContext, useEffect, useState} from "react";
+import {useContext, useEffect, useRef, useState} from "react";
 import {GenerationOptions} from "../system/Audiocraft.tsx";
 import {ServerContext} from "./ServerContext.tsx";
+import WavesurferPlayer from "@wavesurfer/react";
+
+import './GenerationHistory.css'
 
 class GenerationData {
     uuid: string
@@ -25,20 +28,26 @@ function GenerationItem({data, useAll, loadAudio, loadTokens}: {
     loadAudio: ((uuid: string) => void),
     loadTokens: ((tokens: number[][]) => void)
 }) {
+
     return <div className="generation-item">
-        <div className={'timestamp'}>{ data.timestamp.toLocaleString() }</div>
-        <div className={'prompt'}>{ data.options.prompt }</div>
-        <audio controls src={ data.audioUrl } />
+        <div className={'timestamp'}>{data.timestamp.toLocaleString()}</div>
+        <div className={'prompt'}>{data.options.prompt}</div>
+        <WavesurferPlayer
+            url={data.audioUrl}
+            waveColor={'purple'}
+            height={30}
+            mediaControls={true}
+            />
         <div className={'buttons'}>
-            <button onClick={(e) => useAll(data.options)}>🌟</button>
+            <button onClick={(e) => useAll(data.options)}>️⚙️</button>
             <button onClick={(e) => loadAudio(data.uuid)}>🎶</button>
             <button onClick={(e) => loadTokens(data.tokens)}>🎟️</button>
         </div>
     </div>
-}
+        }
 
 
-export function GenerationHistory({useAll, loadAudio, loadTokens}: {
+        export function GenerationHistory({useAll, loadAudio, loadTokens}: {
     useAll: ((options: GenerationOptions) => void),
     loadAudio: ((uuid: string) => void),
     loadTokens: ((tokens: number[][]) => void)

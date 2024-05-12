@@ -1,0 +1,19 @@
+
+
+div.generation-item {
+    border: 1px solid lightgrey;
+    padding: 5px;
+    margin: 10px;
+}
+
+div.timestamp {
+    font-size: 0.5em
+}
+div.prompt {
+    font-family: monospace
+}
+
+div.buttons button {
+    font-size: 0.8em;
+}
+

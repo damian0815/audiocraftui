@@ -1,3 +1,18 @@
+
+div.magnet-mutate-page {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+}
+
+div.main-ui {
+    flex: 75%;
+}
+
+div.generation-history {
+    flex: 25%;
+}
+
 div.mask-pcts {
     display: flex;
     justify-content: center;

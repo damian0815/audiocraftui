@@ -98,7 +98,8 @@ class AudiocraftWrapper:
                 #decoding_steps=[int(20 * self.model.lm.cfg.dataset.segment_duration // 10), 10, 10, 10],
                 decoding_steps=parameters.steps,
                 span_arrangement='stride1',
-                wandering_mask=parameters.wandering_mask,
+                masking_strategy=parameters.masking_strategy,
+                masking_options=parameters.masking_options,
                 initial_mask_pcts=parameters.initial_mask_pcts or [0, 0, 0, 0],
                 final_mask_pcts=parameters.final_mask_pcts or [1, 1, 1, 1],
                 negative_conditions=negative_conditions,
@@ -116,17 +117,17 @@ class AudiocraftWrapper:
                 if parameters.seed is not None:
                     random.seed(parameters.seed)
                     torch.manual_seed(parameters.seed)
-                output = self.model.generate(descriptions=[parameters.prompt],
-                                             progress=True,
-                                             return_tokens=True)
-                #audio_output = model.compression_model.decode(output[1], force_cpu_elu=True)
-                #display_audio(audio_output, sample_rate=model.compression_model.sample_rate)
+
+                attributes, prompt_tokens = self.model._prepare_tokens_and_attributes(
+                    descriptions=[parameters.prompt], prompt=None)
+                assert prompt_tokens is None
+                tokens = self.model._generate_tokens(attributes, prompt_tokens, progress=True)
                 self.model.set_custom_progress_callback(None)
                 self.model.set_should_cancel_callback(None)
-                if output is None:
+                if tokens is None:
                     progress_callback(0, 0, None)
                 else:
-                    return output[1]
+                    return tokens
 
     def request_cancel_generation(self, uuid: str):
         self.cancelled_uuids.append(uuid)

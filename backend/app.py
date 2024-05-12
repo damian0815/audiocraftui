@@ -3,30 +3,25 @@ import struct
 from typing import Optional
 
 import torch
+import torchaudio
 from flask import Flask, request, jsonify
 from flask_socketio import socketio, SocketIO, emit
 from flask_cors import CORS
+
+from .misc import get_user_data_dir
 from .audiocraft_wrapper import AudiocraftWrapper
-from .db import close_db, init_db_command, save_generation, get_generations
+from .db import close_db, init_db_command, save_generation, save_audio, get_generations, needs_init_db, init_db
 from .generation_history import GenerationParameters
-import appdirs
 
 socketio = SocketIO(debug=True, cors_allowed_origins='*')
 
 def create_app():
 
-    print("hello")
+    app = Flask(__name__)
 
-    appname = "AudiocraftUI"
-    appauthor = "damian0815"
-
-    app = Flask(appname)
-
-    user_data_dir = appdirs.user_data_dir(appname, appauthor)
     # idk where this should go
-    os.makedirs(user_data_dir, exist_ok=True)
     app.config.from_mapping(
-        DATABASE=os.path.join(user_data_dir, 'audiocraftui.sqlite'),
+        DATABASE=os.path.join(get_user_data_dir(), 'audiocraftui.sqlite'),
     )
     socketio.init_app(app)
     CORS(app)
@@ -37,7 +32,7 @@ def create_app():
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
 
-    print("extensions: ", app.extensions)
+    #print("extensions: ", app.extensions)
 
     return app
 
@@ -63,7 +58,7 @@ def on_generate(data):
         progress_args = { "uuid": uuid,
                           "i": i,
                           "count": count,
-                          "tokens": None if tokens is None else tokens[0].tolist(),
+                          "tokens": None if tokens is None else tokens[0].detach().cpu().tolist(),
                           "masks": None,# if masks is None else masks[0].tolist()
                         }
         #print("generate progress:", progress_args)
@@ -73,9 +68,12 @@ def on_generate(data):
         progress_callback=progress_callback,
         parameters=generation_parameters
     )
-    save_generation(uuid, generation_parameters, tokens.detach().cpu().tolist())
-    print("saved")
-    print(get_generations(limit=5))
+    tokens_list = tokens[0].detach().cpu().tolist()
+    emit("generateComplete", {"uuid": uuid, "tokens": tokens_list})
+    audio = get_audiocraft_wrapper(model_type).generate_audio_from_tokens(tokens)
+    print("saving audio with shape", audio.shape)
+    save_audio(uuid, audio[0].detach().cpu(), sample_rate=get_audiocraft_wrapper(model_type).audiocraft_sample_rate)
+    save_generation(uuid, generation_parameters, tokens_list)
 
 
 @socketio.on("cancelGeneration")

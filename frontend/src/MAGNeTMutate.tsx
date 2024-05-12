@@ -1,7 +1,7 @@
 
 import { socket } from './system/socket.ts'
 import {ConnectionManager} from "./components/ConnectionManager.tsx";
-import {useEffect, useState} from "react";
+import {useContext, useEffect, useState} from "react";
 import {TokensGrid} from "./components/TokensGrid.tsx";
 
 import {Audiocraft, GenerationOptions, interpolateTokens} from './system/Audiocraft.tsx';
@@ -11,10 +11,12 @@ import InputNumber from "rc-input-number";
 
 import "./MAGNeTMutate.css"
 import {GenerationHistory} from "./components/GenerationHistory.tsx";
+import {ServerContext} from "./components/ServerContext.tsx";
 
 function MAGNeTMutate() {
 
     const audiocraft = Audiocraft.getInstance(socket, 'magnet')
+    const serverInfo = useContext(ServerContext)
 
     const [isConnected, setIsConnected] = useState(socket.connected);
     const [tokens, setTokens] = useState<number[][]>([]);
@@ -24,7 +26,7 @@ function MAGNeTMutate() {
     const [progress, setProgress] = useState<number|undefined>()
 
     const [prompt, setPrompt] = useState<string>("");
-    const [negativePrompt, setNegativePrompt] = useState<string|null>(null);
+    const [negativePrompt, setNegativePrompt] = useState<string>("");
     const [steps, setSteps] = useState([20, 10, 10, 10])
     const [seed, setSeed] = useState<number>(0);
     const [useSampling, setUseSampling] = useState<boolean>(true);
@@ -88,18 +90,29 @@ function MAGNeTMutate() {
         options.negativePrompt = negativePrompt
         options.seed = seed
         options.steps = steps
-        options.initialTokens = (doAudioToAudio ? tokens : null)
-        options.initialMaskPct = (doAudioToAudio ? initialMaskPct : null)
-        options.finalMaskPct = (doAudioToAudio ? finalMaskPct : null)
-        options.temperature = temperature
         options.useSampling = useSampling
         options.topP = topP
         options.topK = topK
-        options.maxCFGCoef = maxCFGCoef
-        options.minCFGCoef = minCFGCoef
+        options.temperature = temperature
+        options.initialTokens = (doAudioToAudio ? tokens : null)
+        options.initialMaskPct = (doAudioToAudio ? initialMaskPct : null)
+        options.finalMaskPct = (doAudioToAudio ? finalMaskPct : null)
+        options.maxCfgCoef = maxCFGCoef
+        options.minCfgCoef = minCFGCoef
         options.maskingStrategy = maskingStrategy
         options.maskingOptions = maskingOptions
         return options
+    }
+
+    function loadAudio(uuid: string) {
+        const url = serverInfo.baseUrl + "/audio/" + uuid
+        ToneAudioBuffer.fromUrl(url)
+            .then(b => setWorkingAudioBuffer(b))
+    }
+
+    function loadTokens(tokens: number[][]) {
+        console.log('loading tokens', tokens)
+        setTokens(tokens)
     }
 
     function generate() {
@@ -118,6 +131,7 @@ function MAGNeTMutate() {
 
                 if (progressPct == 1) {
                     setGenerationUuid(undefined)
+                    loadAudio(uuid)
                 }
             }
 
@@ -147,31 +161,6 @@ function MAGNeTMutate() {
         }
     }
 
-    async function doInterpolate() {
-        const totalTokenLength = tokens[0].length;
-        const newTokens: number[][] = [];
-        const numSteps = 10;
-        const tokenSpanWidth = totalTokenLength / numSteps;
-        for (let i=0; i<numSteps; i++) {
-            console.log("interpolation step", i)
-            const alpha = (i/(numSteps-1));
-            const firstIndex = i * tokenSpanWidth;
-            const lastIndex = (i+1) * tokenSpanWidth;
-            const tokensSlice = tokens.map((v) => v.slice(firstIndex, lastIndex))
-            const cachedTokensSlice = cachedTokens!.map((v) => v.slice(firstIndex, lastIndex))
-            console.log('doing interpolation...')
-            const interpolatedSlice = interpolateTokens(tokensSlice, cachedTokensSlice, alpha)
-            console.log('writing to newTokens...')
-            for (let j=0; j<tokens.length; j++) {
-                if (i==0) {
-                    newTokens.push([])
-                }
-                newTokens[j].push(...interpolatedSlice[j])
-            }
-        }
-        setTokens(newTokens)
-    }
-
     function useAll(options: GenerationOptions) {
         console.log("setting options:", options)
         setPrompt(options.prompt)
@@ -195,8 +184,9 @@ function MAGNeTMutate() {
         } else {
             setUseSampling(false)
         }
-        setMaxCFGCoef(options.maxCFGCoef)
-        setMinCFGCoef(options.minCFGCoef)
+        console.log("setting max/min CFG Coef", options.maxCfgCoef, options.minCfgCoef)
+        setMaxCFGCoef(options.maxCfgCoef)
+        setMinCFGCoef(options.minCfgCoef)
     }
 
     function getAvailableMaskingStrategies(doAudioToAudio: boolean) {
@@ -208,9 +198,9 @@ function MAGNeTMutate() {
     }
 
     return (
-        <>
-            <h1>MAGNeT Mutation</h1>
-            <div>
+        <div className={"magnet-mutate-page"}>
+            <div className={"main-ui"}>
+                <h1>MAGNeT Mutation</h1>
                 <div>
                     <textarea value={prompt} placeholder={"prompt"} onChange={
                         (e) => setPrompt(
@@ -219,12 +209,11 @@ function MAGNeTMutate() {
                 </div>
                 <div>
                     <textarea value={negativePrompt} placeholder={"negative prompt"} onChange={
-                        (e) => setNegativePrompt(
-                            (e.target.value.length > 0) ? e.target.value : null
-                        )}>{negativePrompt}</textarea>
+                        (e) => setNegativePrompt(e.target.value)}>{negativePrompt}</textarea>
                 </div>
                 <div className={"inline-input-number"}>Seed:
-                    <InputNumber className={"inline-input-number-80"} value={seed} onChange={(value) => value && setSeed(value)}/>
+                    <InputNumber className={"inline-input-number-80"} value={seed}
+                                 onChange={(value) => value && setSeed(value)}/>
                     <div className={"inline-input-number"}>CFG coefficients:
                         Max <InputNumber value={maxCFGCoef} step={"0.1"}
                                          onChange={(value) => value && setMaxCFGCoef(value)}/>
@@ -258,7 +247,8 @@ function MAGNeTMutate() {
                 </div>
 
                 <div>Masking strategy:
-                    <select name={"mask-strategy"} value={maskingStrategy} onChange={(e) => setMaskingStrategy(e.target.value)}>
+                    <select name={"mask-strategy"} value={maskingStrategy}
+                            onChange={(e) => setMaskingStrategy(e.target.value)}>
                         {getAvailableMaskingStrategies(doAudioToAudio).map((s) =>
                             <option value={s} key={s}>{s}</option>
                         )}
@@ -296,25 +286,23 @@ function MAGNeTMutate() {
                         </div>
                     </div>
                 }
+                {generationUuid && progress && <progress value={progress}/>}
+                {generationUuid && <button onClick={cancelGeneration}>Cancel</button>}
+                {!generationUuid && <button onClick={generate}>Generate</button>}
+
+                <TokensGrid data={tokens} width={1024}/>
+                <button onClick={decode}>Decode</button>
+                {workingAudioBuffer && <WavesurferPanel id={"working"} audioBuffer={workingAudioBuffer}/>}
+
+                <div>
+                    <ConnectionManager/>
+                    <div>is connected: {isConnected ? "1" : "0"}</div>
+                </div>
             </div>
-            {generationUuid && progress && <progress value={progress}/>}
-            {generationUuid && <button onClick={cancelGeneration}>Cancel</button>}
-            {!generationUuid && <button onClick={generate}>Generate</button>}
-
-            <button onClick={() => setCachedTokens(tokens)}>Save</button>
-            {cachedTokens && <button onClick={() => setTokens(cachedTokens)}>Restore</button>}
-            {tokens && cachedTokens && <button onClick={() => doInterpolate()}>Interpolate current to saved</button>}
-            <TokensGrid data={tokens} width={1024}/>
-            <button onClick={decode}>Decode</button>
-            {workingAudioBuffer && <WavesurferPanel id={"working"} audioBuffer={workingAudioBuffer}/>}
-
-            <div>
-                <ConnectionManager/>
-                <div>is connected: {isConnected ? "1" : "0"}</div>
+            <div className={"generation-history"}>
+                <GenerationHistory useAll={useAll} loadAudio={loadAudio} loadTokens={loadTokens}/>
             </div>
-
-            <GenerationHistory useAll={useAll}/>
-        </>
+        </div>
     )
 
 }

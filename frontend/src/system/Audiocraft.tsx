@@ -26,7 +26,7 @@ export function interpolateTokens(a: number[][], b: number[][], alpha: number): 
 
 export class GenerationOptions {
     prompt: string = ""
-    negativePrompt: string | null = null
+    negativePrompt: string = ""
     seed: number = -1
     steps: number[] = [20, 10, 10, 10]
     useSampling: boolean = true
@@ -36,8 +36,8 @@ export class GenerationOptions {
     initialTokens: number[][] | null = null
     initialMaskPct: number[] | null = null
     finalMaskPct: number[] | null = null
-    minCFGCoef: number = 1
-    maxCFGCoef: number = 10
+    minCfgCoef: number = 1
+    maxCfgCoef: number = 10
     maskingStrategy: string = "default";
     maskingOptions: any;
 }
@@ -93,6 +93,13 @@ export class Audiocraft {
             const count = ret['count']
             self._handleGenerateProgress(uuid, i, count, tokens);
         })
+
+        this.socket.on('generateComplete', function (ret) {
+            //console.log("got generateProgress", ret)
+            const uuid = ret['uuid']
+            const tokens = ret['tokens']
+            self._handleGenerateComplete(uuid, tokens);
+        })
     }
 
     tokenize(buffer: ToneAudioBuffer, callback: (x: any) => void): ToneAudioBuffer {
@@ -137,24 +144,12 @@ export class Audiocraft {
         const requestUuid = uuid()
         this.requestCallbackStorage.set(requestUuid, callback)
         console.log("generate request with prompt", options.prompt, "uuid", requestUuid)
+        //const camelToSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+
         this.socket.emit('generate', {
             "model_type": this.modelType,
             "uuid": requestUuid,
-            "parameters": {
-                "seed": options.seed,
-                "steps": options.steps,
-                "prompt": options.prompt,
-                "negative_prompt": options.negativePrompt,
-                "min_cfg_coef": options.minCFGCoef,
-                "max_cfg_coef": options.maxCFGCoef,
-                "initial_mask_pcts": options.initialMaskPct,
-                "final_mask_pcts": options.finalMaskPct,
-                "initial_tokens": options.initialTokens,
-                "temperature": options.temperature,
-                "use_sampling": options.useSampling,
-                "top_p": options.topP,
-                "top_k": options.topK,
-            }
+            "parameters": options//.toJsonDict()
         })
         return requestUuid
     }
@@ -174,10 +169,18 @@ export class Audiocraft {
                 this.requestCallbackStorage.delete(uuid)
             } else {
                 callback(stepNumber / totalSteps, tokens, masks)
-                if (stepNumber == totalSteps) {
-                    this.requestCallbackStorage.delete(uuid)
-                }
             }
+        } else {
+            //console.log('no registered callback for', uuid)
+        }
+    }
+
+    _handleGenerateComplete(uuid: string, tokens: any[]) {
+        const callback = this.requestCallbackStorage.get(uuid)
+        if (callback) {
+            //console.log("generate callback with", tokens)
+            callback(1.0, tokens, null)
+            this.requestCallbackStorage.delete(uuid)
         } else {
             //console.log('no registered callback for', uuid)
         }

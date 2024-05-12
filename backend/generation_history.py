@@ -1,8 +1,11 @@
+import os
 from typing import Optional
 
 import torch
 from dataclasses import dataclass, field
 from dataclass_wizard import JSONWizard
+
+from .misc import get_user_data_dir
 
 
 @dataclass
@@ -15,7 +18,8 @@ class GenerationParameters(JSONWizard):
     top_k: int = 0
     top_p: float = 0.9
     temperature: float = 3.0
-    wandering_mask: bool = False
+    masking_strategy: str = "default"
+    masking_options: dict = field(default_factory=dict)
     max_cfg_coef: float = 10.0
     min_cfg_coef: float = 1.0
     initial_tokens: Optional[list[list[float]]] = None
@@ -23,7 +27,9 @@ class GenerationParameters(JSONWizard):
     final_mask_pcts: Optional[list[float]] = None
 
 
-
+def make_audio_path(uuid) -> str:
+    audio_path = os.path.join(get_user_data_dir(), 'generations', f'{uuid}.mp3')
+    return audio_path
 
 
 class GenerationHistory:

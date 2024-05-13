@@ -34,8 +34,8 @@ export class GenerationOptions {
     topK: number = 0
     temperature: number = 3
     initialTokens: number[][] | null = null
-    initialMaskPct: number[] | null = null
-    finalMaskPct: number[] | null = null
+    initialMaskPcts: number[] | null = null
+    finalMaskPcts: number[] | null = null
     minCfgCoef: number = 1
     maxCfgCoef: number = 10
     maskingStrategy: string = "default";

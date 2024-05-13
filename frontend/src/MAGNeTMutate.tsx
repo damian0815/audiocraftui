@@ -43,8 +43,8 @@ function MAGNeTMutate() {
 
     const [doAudioToAudio, setDoAudioToAudio] = useState<boolean>(false);
 
-    const [initialMaskPct, setInitialMaskPct] = useState([0, 0, 0, 0]);
-    const [finalMaskPct, setFinalMaskPct] = useState([1, 1, 1, 1]);
+    const [initialMaskPcts, setInitialMaskPcts] = useState([0, 0, 0, 0]);
+    const [finalMaskPcts, setFinalMaskPcts] = useState([1, 1, 1, 1]);
 
 
     const [workingAudioBuffer, setWorkingAudioBuffer] = useState<ToneAudioBuffer>();
@@ -95,8 +95,8 @@ function MAGNeTMutate() {
         options.topK = topK
         options.temperature = temperature
         options.initialTokens = (doAudioToAudio ? tokens : null)
-        options.initialMaskPct = (doAudioToAudio ? initialMaskPct : null)
-        options.finalMaskPct = (doAudioToAudio ? finalMaskPct : null)
+        options.initialMaskPcts = (doAudioToAudio ? initialMaskPcts : null)
+        options.finalMaskPcts = (doAudioToAudio ? finalMaskPcts : null)
         options.maxCfgCoef = maxCFGCoef
         options.minCfgCoef = minCFGCoef
         options.maskingStrategy = maskingStrategy
@@ -171,8 +171,8 @@ function MAGNeTMutate() {
         if (options.initialTokens) {
             setDoAudioToAudio(true)
             setTokens(options.initialTokens)
-            setInitialMaskPct(options.initialMaskPct!)
-            setFinalMaskPct(options.finalMaskPct!)
+            setInitialMaskPcts(options.initialMaskPcts!)
+            setFinalMaskPcts(options.finalMaskPcts!)
         } else {
             setDoAudioToAudio(false)
         }
@@ -265,24 +265,24 @@ function MAGNeTMutate() {
                 {tokens.length > 0 && doAudioToAudio &&
                     <div>Mask percents:
                         <div className={"mask-pcts"}>Initial:
-                            <input type="number" value={initialMaskPct[0]} step={"0.01"}
-                                   onChange={(e) => setInitialMaskPct([e.target.valueAsNumber, initialMaskPct[1], initialMaskPct[2], initialMaskPct[3]])}/>
-                            <input type="number" value={initialMaskPct[1]} step={"0.01"}
-                                   onChange={(e) => setInitialMaskPct([initialMaskPct[0], e.target.valueAsNumber, initialMaskPct[2], initialMaskPct[3]])}/>
-                            <input type="number" value={initialMaskPct[2]} step={"0.01"}
-                                   onChange={(e) => setInitialMaskPct([initialMaskPct[0], initialMaskPct[1], e.target.valueAsNumber, initialMaskPct[3]])}/>
-                            <input type="number" value={initialMaskPct[3]} step={"0.01"}
-                                   onChange={(e) => setInitialMaskPct([initialMaskPct[0], initialMaskPct[1], initialMaskPct[2], e.target.valueAsNumber])}/>
+                            <input type="number" value={initialMaskPcts[0]} step={"0.01"}
+                                   onChange={(e) => setInitialMaskPcts([e.target.valueAsNumber, initialMaskPcts[1], initialMaskPcts[2], initialMaskPcts[3]])}/>
+                            <input type="number" value={initialMaskPcts[1]} step={"0.01"}
+                                   onChange={(e) => setInitialMaskPcts([initialMaskPcts[0], e.target.valueAsNumber, initialMaskPcts[2], initialMaskPcts[3]])}/>
+                            <input type="number" value={initialMaskPcts[2]} step={"0.01"}
+                                   onChange={(e) => setInitialMaskPcts([initialMaskPcts[0], initialMaskPcts[1], e.target.valueAsNumber, initialMaskPcts[3]])}/>
+                            <input type="number" value={initialMaskPcts[3]} step={"0.01"}
+                                   onChange={(e) => setInitialMaskPcts([initialMaskPcts[0], initialMaskPcts[1], initialMaskPcts[2], e.target.valueAsNumber])}/>
                         </div>
                         <div className={"mask-pcts"}>Final:
-                            <input type="number" value={finalMaskPct[0]} step={"0.01"}
-                                   onChange={(e) => setFinalMaskPct([e.target.valueAsNumber, finalMaskPct[1], finalMaskPct[2], finalMaskPct[3]])}/>
-                            <input type="number" value={finalMaskPct[1]} step={"0.01"}
-                                   onChange={(e) => setFinalMaskPct([finalMaskPct[0], e.target.valueAsNumber, finalMaskPct[2], finalMaskPct[3]])}/>
-                            <input type="number" value={finalMaskPct[2]} step={"0.01"}
-                                   onChange={(e) => setFinalMaskPct([finalMaskPct[0], finalMaskPct[1], e.target.valueAsNumber, finalMaskPct[3]])}/>
-                            <input type="number" value={finalMaskPct[3]} step={"0.01"}
-                                   onChange={(e) => setFinalMaskPct([finalMaskPct[0], finalMaskPct[1], finalMaskPct[2], e.target.valueAsNumber])}/>
+                            <input type="number" value={finalMaskPcts[0]} step={"0.01"}
+                                   onChange={(e) => setFinalMaskPcts([e.target.valueAsNumber, finalMaskPcts[1], finalMaskPcts[2], finalMaskPcts[3]])}/>
+                            <input type="number" value={finalMaskPcts[1]} step={"0.01"}
+                                   onChange={(e) => setFinalMaskPcts([finalMaskPcts[0], e.target.valueAsNumber, finalMaskPcts[2], finalMaskPcts[3]])}/>
+                            <input type="number" value={finalMaskPcts[2]} step={"0.01"}
+                                   onChange={(e) => setFinalMaskPcts([finalMaskPcts[0], finalMaskPcts[1], e.target.valueAsNumber, finalMaskPcts[3]])}/>
+                            <input type="number" value={finalMaskPcts[3]} step={"0.01"}
+                                   onChange={(e) => setFinalMaskPcts([finalMaskPcts[0], finalMaskPcts[1], finalMaskPcts[2], e.target.valueAsNumber])}/>
                         </div>
                     </div>
                 }

@@ -91,7 +91,7 @@ export class Audiocraft {
             const tokens = ret['tokens']
             const i = ret['i']
             const count = ret['count']
-            self._handleGenerateProgress(uuid, i, count, tokens);
+            self._handleGenerateProgress(uuid, i, count, tokens, []);
         })
 
         this.socket.on('generateComplete', function (ret) {
@@ -139,10 +139,12 @@ export class Audiocraft {
     }
 
     generate(options: GenerationOptions,
-             callback: (progressPct: number, tokens: [][], masks: [][]) => void,
+             progressCallback: (progressPct: number, tokens: [][], masks: [][]) => void,
+             completionCallback: (tokens: [][]) => void
         ): string {
         const requestUuid = uuid()
-        this.requestCallbackStorage.set(requestUuid, callback)
+        this.requestCallbackStorage.set(requestUuid, progressCallback)
+        this.requestCallbackStorage.set(requestUuid+'-complete', completionCallback)
         console.log("generate request with prompt", options.prompt, "uuid", requestUuid)
         //const camelToSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 
@@ -163,7 +165,7 @@ export class Audiocraft {
     _handleGenerateProgress(uuid: string, stepNumber: number, totalSteps: number, tokens: any[], masks: any[]) {
         const callback = this.requestCallbackStorage.get(uuid)
         if (callback) {
-            //console.log("generate callback with", tokens)
+            //console.log("generateProgress callback with", tokens)
             if (!tokens) {
                 callback(0, null)
                 this.requestCallbackStorage.delete(uuid)
@@ -176,11 +178,12 @@ export class Audiocraft {
     }
 
     _handleGenerateComplete(uuid: string, tokens: any[]) {
-        const callback = this.requestCallbackStorage.get(uuid)
+        const callbackId = uuid+'-complete'
+        const callback = this.requestCallbackStorage.get(callbackId)
         if (callback) {
-            //console.log("generate callback with", tokens)
-            callback(1.0, tokens, null)
-            this.requestCallbackStorage.delete(uuid)
+            //console.log("generateComplete callback with", tokens)
+            callback(tokens)
+            this.requestCallbackStorage.delete(callbackId)
         } else {
             //console.log('no registered callback for', uuid)
         }

@@ -69,11 +69,11 @@ def on_generate(data):
         parameters=generation_parameters
     )
     tokens_list = tokens[0].detach().cpu().tolist()
-    emit("generateComplete", {"uuid": uuid, "tokens": tokens_list})
     audio = get_audiocraft_wrapper(model_type).generate_audio_from_tokens(tokens)
     print("saving audio with shape", audio.shape)
     save_audio(uuid, audio[0].detach().cpu(), sample_rate=get_audiocraft_wrapper(model_type).audiocraft_sample_rate)
     save_generation(uuid, generation_parameters, tokens_list)
+    emit("generateComplete", {"uuid": uuid, "tokens": tokens_list})
 
 
 @socketio.on("cancelGeneration")

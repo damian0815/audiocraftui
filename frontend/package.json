@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/pubsub-js": "^1.8.6",
     "@wavesurfer/react": "^1.0.4",
     "audiobuffer-to-wav": "^1.0.0",
+    "pubsub-js": "^1.9.4",
     "rc-input-number": "^9.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

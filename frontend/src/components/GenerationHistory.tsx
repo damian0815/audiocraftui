@@ -4,7 +4,10 @@ import {GenerationOptions} from "../system/Audiocraft.tsx";
 import {ServerContext} from "./ServerContext.tsx";
 import WavesurferPlayer from "@wavesurfer/react";
 
+import PubSub from "pubsub-js";
+
 import './GenerationHistory.css'
+import useTraceUpdate from "../system/useTraceUpdate.tsx";
 
 class GenerationData {
     uuid: string
@@ -47,17 +50,21 @@ function GenerationItem({data, useAll, loadAudio, loadTokens}: {
         }
 
 
-        export function GenerationHistory({useAll, loadAudio, loadTokens}: {
-    useAll: ((options: GenerationOptions) => void),
-    loadAudio: ((uuid: string) => void),
-    loadTokens: ((tokens: number[][]) => void)
+export function GenerationHistory(props:  {
+    useAll: (options: GenerationOptions) => void,
+    loadAudio: (uuid: string) => void,
+    loadTokens: (tokens: number[][]) => void
 }) {
+
+    useTraceUpdate(props)
+
+    const {useAll, loadAudio, loadTokens} = props
 
     const serverInfo = useContext(ServerContext)
     const [items, setItems] = useState<GenerationData[]>([]);
 
 
-    function fetchData() {
+    function fetchData(reason: string|null =null) {
         const lastItems = items
         const params: any = {
             'limit': 20
@@ -70,10 +77,12 @@ function GenerationItem({data, useAll, loadAudio, loadTokens}: {
         function makeAudioUrl(uuid: string) {
             return serverInfo.baseUrl + "/audio/" + uuid
         }
+
+        console.log("fetching", url, "because", reason)
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                console.log(data)
+                console.log("fetched because", reason, ":", data)
                 const fetchedItems = data
                     .map((v: any) => new GenerationData(v.uuid, v.generation_params, v.tokens, v.timestamp, makeAudioUrl(v.uuid)))
                     // remove existing items
@@ -83,7 +92,8 @@ function GenerationItem({data, useAll, loadAudio, loadTokens}: {
     }
 
     useEffect(() => {
-        fetchData()
+        fetchData("GenerationHistory-useEffect")
+        PubSub.subscribe("AudiocraftGenerationComplete", () => { fetchData("pubsub")})
     }, [])
 
     function renderItems(items: GenerationData[]) {
@@ -102,7 +112,7 @@ function GenerationItem({data, useAll, loadAudio, loadTokens}: {
         <div className={"generation-history"}>
             <InfiniteScroll
                 dataLength={items.length}
-                next={fetchData}
+                next={() => fetchData("InfiniteScroll-next")}
                 hasMore={false}
                 loader={<h4>loading...</h4>}
                 endMessage={

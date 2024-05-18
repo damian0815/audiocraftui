@@ -2,6 +2,8 @@ import { v4 as uuid } from 'uuid'
 import {socket as Socket} from "./socket.ts";
 import {ToneAudioBuffer} from "tone";
 
+import PubSub from 'pubsub-js'
+
 function platformIsLittleEndian() {
     var arrayBuffer = new ArrayBuffer(2);
     var uint8Array = new Uint8Array(arrayBuffer);
@@ -181,6 +183,7 @@ export class Audiocraft {
             //console.log("generate callback with", tokens)
             callback(1.0, tokens, null)
             this.requestCallbackStorage.delete(uuid)
+            PubSub.publish('AudiocraftGenerationComplete', {'uuid': uuid} );
         } else {
             //console.log('no registered callback for', uuid)
         }

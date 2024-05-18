@@ -20,7 +20,6 @@ function MAGNeTMutate() {
 
     const [isConnected, setIsConnected] = useState(socket.connected);
     const [tokens, setTokens] = useState<number[][]>([]);
-    const [cachedTokens, setCachedTokens] = useState<number[][]|undefined>();
 
     const [generationUuid, setGenerationUuid] = useState<string|undefined>()
     const [progress, setProgress] = useState<number|undefined>()

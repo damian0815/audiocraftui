@@ -118,7 +118,7 @@ function MAGNeTMutate() {
         if (prompt.trim().length > 0) {
             console.log(`sending generate with prompt '${prompt}'`)
 
-            function callback(progressPct: number, tokens: [][]) {
+            function progressCallback(progressPct: number, tokens: [][]) {
 
                 if (!tokens) {
                     setGenerationUuid(undefined)
@@ -127,18 +127,20 @@ function MAGNeTMutate() {
                 setProgress(progressPct);
                 //console.log("generate progress tokens:", tokens);
                 setTokens(tokens);
+            }
 
-                if (progressPct == 1) {
-                    setGenerationUuid(undefined)
-                    loadAudio(uuid)
-                }
+            function completionCallback(tokens: [][]) {
+                setGenerationUuid(undefined)
+                setTokens(tokens);
+                loadAudio(uuid)
             }
 
             const generationOptions = buildGenerationOptions()
 
             const uuid = audiocraft!.generate(
                 generationOptions,
-                callback,
+                progressCallback,
+                completionCallback
             )
 
             setProgress(0.000001);
